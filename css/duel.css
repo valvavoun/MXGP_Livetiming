@@ -1,0 +1,379 @@
+/* ══════════════════════════════════════════════════════════
+   MODE DUEL — duel.css
+   Couleur = couleur moto du pilote (--duel-rider-c via JS)
+══════════════════════════════════════════════════════════ */
+
+/* ── Row sélectionné : couleur moto en bordure + fond ── */
+.row.duel-selected {
+  border-left-color: var(--duel-rider-c, #888) !important;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--duel-rider-c, #888) 16%, transparent) 0%,
+    transparent 60%
+  ) !important;
+  outline: 1px solid
+    color-mix(in srgb, var(--duel-rider-c, #888) 30%, transparent);
+  z-index: 6;
+}
+.row.duel-selected:nth-child(even) {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--duel-rider-c, #888) 12%, transparent) 0%,
+    transparent 60%
+  ) !important;
+}
+
+/* ── Panel principal ── */
+.duel-panel {
+  position: fixed;
+  bottom: 72px;
+  right: 12px;
+  z-index: 200;
+  background: #0b0d16;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 5px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.85);
+  width: auto;
+  min-width: 220px;
+  max-width: calc(100vw - 24px);
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
+  font-family: var(--fd);
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
+}
+.duel-panel.duel-visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: all;
+}
+
+/* ── Header ── */
+.duel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #0f1120;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  padding: 3px 8px;
+  gap: 8px;
+}
+.duel-title {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.duel-icon {
+  font-size: 10px;
+}
+.duel-title-txt {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: var(--c-white);
+}
+.duel-close {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 10px;
+  cursor: pointer;
+  padding: 1px 3px;
+  font-family: var(--fd);
+  transition: color 0.15s;
+  line-height: 1.2;
+}
+.duel-close:hover {
+  color: var(--c-white);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* ── Corps ── */
+.duel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* ── En-tête pilotes ── */
+.duel-riders-hdr {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  margin: 0;
+}
+
+.duel-lbl {
+  flex: 0 0 55px;
+  box-sizing: border-box;
+  min-height: 28px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: var(--c-muted);
+  text-transform: uppercase;
+  padding: 3px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.duel-lbl.duel-lbl-sec {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.duel-rider-hdr {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 4px 3px;
+  border-left: 2px solid var(--duel-c, #888);
+  background: color-mix(in srgb, var(--duel-c, #888) 10%, transparent);
+}
+.duel-nr {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--duel-c, var(--c-white));
+  letter-spacing: 0.5px;
+  line-height: 1;
+}
+.duel-name {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--c-white);
+  text-transform: uppercase;
+  line-height: 1;
+}
+.duel-bike {
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: var(--duel-c, var(--c-muted));
+  opacity: 0.7;
+  text-transform: uppercase;
+}
+
+/* ── Ligne métrique ── */
+.duel-row {
+  display: flex;
+  align-items: stretch;
+  min-height: 28px;
+}
+.duel-row:nth-child(odd) {
+  background: rgba(255, 255, 255, 0.015);
+  margin: 0;
+}
+
+/* ── Cellule valeur ── */
+.duel-cell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 3px 4px;
+  border-left: 1px solid rgba(255, 255, 255, 0.04);
+}
+.duel-cell.duel-best {
+  background: color-mix(in srgb, var(--duel-c, #888) 15%, transparent);
+}
+.duel-cell.duel-best .duel-val {
+  color: var(--duel-c, var(--c-green));
+  font-weight: 700;
+}
+.duel-val {
+  font-size: 13px;
+  font-family: var(--fd);
+  color: var(--c-white);
+  line-height: 1;
+  letter-spacing: 0.3px;
+}
+.duel-diff {
+  font-size: 11px;
+  color: var(--c-green);
+  font-family: var(--fd);
+  opacity: 0.8;
+  line-height: 1;
+}
+
+/* ── Résumé avantage secteurs ── */
+.duel-sum-row {
+  display: flex;
+  align-items: stretch;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: 2px;
+}
+.duel-sum-row .duel-lbl {
+  font-size: 9px;
+}
+.duel-adv .duel-val {
+  font-size: 14px;
+  font-weight: 700;
+}
+.duel-adv.duel-best .duel-val {
+  font-size: 15px;
+}
+
+/* ── Hint ── */
+.duel-hint {
+  padding: 4px 10px;
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.12);
+  text-align: center;
+  text-transform: uppercase;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+/* ── Écart entre pilotes ── */
+.duel-gap-section {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.duel-gap-block {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px 6px;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.015);
+}
+.duel-gap-block + .duel-gap-block {
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+.duel-gap-riders {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+.duel-gap-name {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 72px;
+}
+.duel-gap-arrow {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.25);
+  flex-shrink: 0;
+}
+.duel-gap-val {
+  font-size: 20px;
+  font-weight: 700;
+  font-family: var(--fd);
+  letter-spacing: 1px;
+  color: var(--c-white);
+  white-space: nowrap;
+  text-align: right;
+  flex-shrink: 0;
+}
+.duel-gap-val.duel-gap-close {
+  color: var(--c-red);
+}
+.duel-gap-na {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.25);
+}
+
+/* ── Cellule secteur actif : contour interne couleur moto, sans chevauchement ── */
+.duel-cell.duel-cell-active {
+  box-shadow: inset 0 0 0 1px var(--duel-c, #888);
+  background: color-mix(in srgb, var(--duel-c, #888) 14%, transparent);
+}
+
+.duel-cell.duel-cell-active .duel-val {
+  color: var(--duel-c, var(--c-white));
+  font-weight: 700;
+}
+/* Quand actif ET meilleur : contour plus épais */
+.duel-cell.duel-cell-active.duel-best {
+  box-shadow: inset 0 0 0 1px var(--duel-c, #888);
+}
+
+/* ── Mobile — largeur fixe 280px, pas de responsive ── */
+@media (max-width: 600px) {
+  .duel-panel {
+    left: auto;
+    right: 8px;
+    bottom: 72px;
+    width: 280px;
+    min-width: 280px;
+    max-width: 280px;
+    max-height: calc(100vh - 120px);
+  }
+
+  .duel-lbl {
+    flex: 0 0 55px;
+    font-size: 10px;
+    padding: 3px 8px;
+  }
+
+  .duel-row {
+    min-height: 28px;
+  }
+
+  .duel-cell {
+    padding: 3px 4px;
+  }
+
+  .duel-val {
+    font-size: 13px;
+  }
+
+  .duel-diff {
+    font-size: 11px;
+  }
+
+  .duel-gap-block {
+    padding: 7px 10px 6px;
+    gap: 8px;
+    flex-wrap: nowrap;
+  }
+
+  .duel-gap-riders {
+    gap: 6px;
+  }
+
+  .duel-gap-name {
+    font-size: 11px;
+    max-width: 72px;
+  }
+
+  .duel-gap-val {
+    font-size: 18px;
+  }
+
+  .duel-hint {
+    font-size: 8px;
+    padding: 4px 10px;
+  }
+
+  .duel-nr {
+    font-size: 15px;
+  }
+
+  .duel-name {
+    font-size: 9px;
+  }
+
+  .duel-bike {
+    font-size: 8px;
+  }
+}

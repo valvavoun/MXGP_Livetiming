@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Titre -->
+    <title>MXGP Live Timing</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="shortcut icon" href="favicon.png" type="image/png" />
+    <link rel="apple-touch-icon" href="favicon.png" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300&family=Barlow+Condensed:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/duel.css" />
+    <link rel="stylesheet" href="css/gp.css" />
+    <link rel="stylesheet" href="css/stats.css" />
+    <link rel="stylesheet" href="css/settings.css" />
+  </head>
+
+  <body>
+    <!-- ══════════════ HEADER ══════════════ -->
+    <div class="hdr">
+      <div class="hdr-inner">
+        <!-- Left — brand text -->
+        <div class="hdr-brand">
+          <div class="brand-text">
+            <div class="brand-cat" id="brand-cat">MXGP</div>
+            <div class="brand-sess" id="brand-sess">
+              FIM Motocross World Championship · Live Timing
+            </div>
+          </div>
+        </div>
+
+        <!-- Center — live badge + clock -->
+        <div class="hdr-center">
+          <div class="live-badge st-connecting" id="live-badge">
+            <div class="dot blink" id="live-dot"></div>
+            <div class="badge-lbl" id="live-lbl">CONNECTING…</div>
+          </div>
+
+          <div class="race-clock" id="race-clock">
+            —<span class="s">:</span>——
+          </div>
+
+          <div class="clock-lbl" id="clock-lbl"></div>
+        </div>
+
+        <!-- Right — boutons (engrenage + GP ajouté par JS) + version badge -->
+        <div class="hdr-right">
+          <!-- settings-btn inséré ici par settings.js -->
+          <!-- gp-hdr-btn inséré ici par gp.js -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Connection status bar -->
+    <div class="cbar hidden" id="cbar">
+      <span id="cbar-txt">Negotiating SignalR…</span>
+      <span class="cbar-detail" id="cbar-dt"></span>
+    </div>
+
+    <!-- ══════════════ TABLE HEADER ══════════════
+         data-col : clé identique à settings.js COLS[*].key
+    ═══════════════════════════════════════════ -->
+    <div class="thead-wrap" id="thead-wrap">
+      <div class="thead" id="thead">
+        <div class="ch c" data-col="pos">Pos</div>
+        <div class="ch c" data-col="nr">Nr</div>
+        <div class="ch" data-col="rider">Rider</div>
+        <div class="ch c" data-col="nat">Nat</div>
+        <div class="ch c" data-col="bike">Bike</div>
+        <div class="ch c" data-col="time">Time</div>
+        <div class="ch c" data-col="laps">Laps</div>
+        <div class="ch c" data-col="df">Diff.First</div>
+        <div class="ch c" data-col="dp">Diff.Prv</div>
+        <div class="ch c" data-col="best">Best Lap</div>
+        <div class="ch c" data-col="inlap">In Lap</div>
+        <div class="ch c" data-col="ll1">Last Lap</div>
+        <div class="ch c" data-col="ll2">Last Lap 2</div>
+        <div class="ch c" data-col="ll3">Last Lap 3</div>
+        <div class="ch c" data-col="s1">S1</div>
+        <div class="ch c" data-col="s2">S2</div>
+        <div class="ch c" data-col="s3">S3</div>
+        <div class="ch c" data-col="s4">S4</div>
+        <div class="ch c" data-col="delta">Delta</div>
+        <div class="ch c" data-col="status">Status</div>
+      </div>
+    </div>
+
+    <!-- ══════════════ TABLE ══════════════ -->
+    <div class="tbl-wrap" id="tbl-wrap">
+      <div class="tbody" id="tbody">
+        <div class="loading">
+          <div class="spin"></div>
+          <div class="load-txt">CONNECTING TO LIVERESULTS.MXGP.COM…</div>
+        </div>
+      </div>
+
+      <!-- Best lap -->
+      <div class="bestlap-bar" id="bl-bar">
+        <span class="bl-prefix">BEST LAP</span>
+        <span class="bl-num" id="bl-num">#—</span>
+        <span class="bl-name" id="bl-name">—</span>
+        <span class="bl-time" id="bl-time">—</span>
+        <span class="bl-lap" id="bl-lap"></span>
+      </div>
+    </div>
+
+    <!-- Bottom ticker -->
+    <div class="ticker">
+      <div class="t-cat" id="t-cat">MX</div>
+      <div class="t-scroll">
+        <div class="t-inner" id="t-inner">
+          <span class="ti"
+            >Connecting to SignalR stream — liveresults.mxgp.com</span
+          >
+          <span class="ti"
+            >Connecting to SignalR stream — liveresults.mxgp.com</span
+          >
+        </div>
+      </div>
+    </div>
+
+    <!-- Delay -->
+    <div class="delay-btn" id="delay-btn" title="Live timing delay">
+      <span class="delay-icon">⏱</span>
+      <span class="delay-btn-val" id="delay-btn-val">0s</span>
+    </div>
+
+    <div class="delay-panel" id="delay-panel" hidden>
+      <div class="delay-panel-title">LIVE TIMING DELAY</div>
+      <div class="delay-presets">
+        <button class="delay-preset active" data-s="0">0s</button>
+        <button class="delay-preset" data-s="10">10s</button>
+        <button class="delay-preset" data-s="15">15s</button>
+        <button class="delay-preset" data-s="30">30s</button>
+        <button class="delay-preset" data-s="60">60s</button>
+      </div>
+      <div class="delay-custom-row">
+        <input
+          class="delay-input"
+          id="delay-input"
+          type="number"
+          min="0"
+          max="300"
+          value="0"
+          placeholder="sec"
+        />
+        <button class="delay-apply" id="delay-apply">OK</button>
+      </div>
+      <div class="delay-status" id="delay-status">No active delay</div>
+    </div>
+
+    <!-- ══════════════ TEMPLATES ══════════════
+         data-col sur chaque .cell → Settings.js gère la visibilité
+         Les .cell avec data-col="llX" utilisent aussi data-ll
+         Les .cell avec data-col="sX"  utilisent aussi data-sec
+    ═══════════════════════════════════════════ -->
+    <template id="tpl-row">
+      <div class="row" data-rider-nr="">
+        <div class="cell c c-pos" data-col="pos"></div>
+
+        <div class="cell c c-nr" data-col="nr">
+          <div class="nr-badge"></div>
+        </div>
+
+        <div class="cell c-rider" data-col="rider">
+          <span class="rider-fn"></span>
+          <span class="rider-ln"></span>
+        </div>
+
+        <div class="cell c c-nat" data-col="nat"></div>
+        <div class="cell c c-bike" data-col="bike"></div>
+        <div class="cell c c-time" data-col="time"></div>
+        <div class="cell c c-laps" data-col="laps"></div>
+        <div class="cell c c-df" data-col="df"></div>
+        <div class="cell c c-dp" data-col="dp"></div>
+        <div class="cell c c-best" data-col="best"></div>
+        <div class="cell c c-inlap" data-col="inlap"></div>
+
+        <div class="cell c c-ll" data-col="ll1" data-ll="1"></div>
+        <div class="cell c c-ll" data-col="ll2" data-ll="2"></div>
+        <div class="cell c c-ll" data-col="ll3" data-ll="3"></div>
+
+        <div class="cell c c-sec" data-col="s1" data-sec="s1"></div>
+        <div class="cell c c-sec" data-col="s2" data-sec="s2"></div>
+        <div class="cell c c-sec" data-col="s3" data-sec="s3"></div>
+        <div class="cell c c-sec" data-col="s4" data-sec="s4"></div>
+
+        <div class="cell c c-delta" data-col="delta"></div>
+        <div class="cell c c-pass" data-col="status"></div>
+      </div>
+    </template>
+
+    <!-- bst-row : label + s1-s4 + delta + status
+         bst-label : grid-column: span X recalculé par Settings.fixBstLabels()
+         Les cellules vides assurent l'alignement avec les colonnes delta/status -->
+    <template id="tpl-bst">
+      <div class="row bst-row">
+        <div class="cell bst-label"></div>
+        <div class="cell c c-sec" data-col="s1" data-sec="s1"></div>
+        <div class="cell c c-sec" data-col="s2" data-sec="s2"></div>
+        <div class="cell c c-sec" data-col="s3" data-sec="s3"></div>
+        <div class="cell c c-sec" data-col="s4" data-sec="s4"></div>
+        <div class="cell c" data-col="delta"></div>
+        <div class="cell c" data-col="status"></div>
+      </div>
+    </template>
+
+    <!-- JS — settings en premier pour que --gc soit prêt avant render -->
+    <script src="js/settings.js"></script>
+    <script src="js/gp.js"></script>
+    <script src="js/stats.js"></script>
+    <script src="js/duel.js"></script>
+    <script src="js/main.js"></script>
+  </body>
+</html>

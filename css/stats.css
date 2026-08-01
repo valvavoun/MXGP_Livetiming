@@ -1,0 +1,230 @@
+/* ══════════════════════════════════════════════════════
+   MXGP Live Timing — stats.css  v1.0
+   Styles du module statistiques saison.
+   Extrait de gp.css pour une séparation modulaire.
+
+   Dépend de : gp.css (variables CSS, .gp-body, .gp-sb-*)
+══════════════════════════════════════════════════════ */
+
+/* ── Bouton STATS dans la sidebar ──────────────────── */
+.gp-sb-stats {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.45);
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 11px 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s, color 0.12s;
+}
+.gp-sb-stats:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+}
+.gp-sb-stats.gp-sb-active {
+  background: rgba(100, 180, 255, 0.08);
+  color: #64b4ff;
+  border-left: 2px solid #64b4ff;
+}
+
+/* ── Hero cards ─────────────────────────────────────── */
+.gp-stats-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.gp-stat-card {
+  background: #0c0f20;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 5px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.gp-stat-card-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+.gp-stat-card-lbl {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: rgba(255, 255, 255, 0.3);
+  text-transform: uppercase;
+}
+.gp-stat-card-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gp-stat-card-val {
+  font-size: 22px;
+  font-weight: 700;
+  color: #64b4ff;
+  line-height: 1;
+  letter-spacing: 0.5px;
+}
+.gp-stat-card-sub {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.25);
+  letter-spacing: 0.5px;
+}
+
+/* ── Tableau stats ──────────────────────────────────── */
+.gp-stats-table-wrap {
+  overflow-x: auto;
+}
+.gp-stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  min-width: 560px;
+}
+.gp-stats-table th {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.3);
+  padding: 5px 8px 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  text-align: center;
+}
+.gp-stats-table th:nth-child(2) {
+  text-align: left;
+}
+.gp-stats-table th:hover {
+  color: rgba(255, 255, 255, 0.7);
+}
+.gp-stats-table th.gp-sort-active {
+  color: #64b4ff;
+}
+.gp-stats-table th.gp-sort-active::after {
+  content: " ▼";
+  font-size: 7px;
+}
+.gp-stats-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.75);
+  text-align: center;
+  vertical-align: middle;
+}
+.gp-stats-table td:nth-child(2) {
+  text-align: left;
+}
+.gp-stats-table tr:hover td {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+/* Podium rows dans le tableau stats */
+.gp-stats-table .gp-pos-1 td               { color: #fff; }
+.gp-stats-table .gp-pos-1 td:first-child   { color: var(--c-yellow, #f5c400); font-weight: 700; }
+.gp-stats-table .gp-pos-2 td:first-child   { color: #aaa; font-weight: 700; }
+.gp-stats-table .gp-pos-3 td:first-child   { color: #cd7f32; font-weight: 700; }
+
+/* ── Valeurs mises en évidence ──────────────────────── */
+.gp-sv-wins {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--c-yellow, #f5c400);
+}
+.gp-sv-pod {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+}
+.gp-sv-perf {
+  font-size: 13px;
+  font-weight: 700;
+  color: #00cc55;
+}
+.gp-sv-avg {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+}
+.gp-sv-zero {
+  color: rgba(255, 255, 255, 0.18);
+}
+.gp-sv-pct {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+/* ── Titre de section ───────────────────────────────── */
+.gp-stats-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  margin: 18px 0 10px;
+}
+.gp-stats-title:first-child {
+  margin-top: 0;
+}
+
+/* ── Mini barre de victoires ────────────────────────── */
+.gp-win-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.gp-win-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--c-yellow, #f5c400);
+  min-width: 2px;
+  opacity: 0.7;
+}
+
+/* ── Mobile ─────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .gp-stats-cards {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .gp-stat-card {
+    padding: 8px 10px;
+  }
+  .gp-stat-card-val {
+    font-size: 18px;
+  }
+
+  /* Bouton STATS : horizontal compact (comme .gp-sb-season) */
+  .gp-sb-stats {
+    width: 64px;
+    min-width: 64px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 8px 6px;
+    text-align: center;
+    letter-spacing: 1.5px;
+    border-bottom: none;
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  .gp-sb-stats.gp-sb-active {
+    border-left: none;
+    border-bottom: 2px solid #64b4ff;
+  }
+}

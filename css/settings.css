@@ -1,0 +1,208 @@
+/* ══════════════════════════════════════════════════════
+   MXGP Live Timing — settings.css  v1.0
+   Bouton engrenage + panneau de réglages des colonnes.
+══════════════════════════════════════════════════════ */
+
+/* ── Bouton engrenage ──────────────────────────────── */
+.sett-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: auto;
+  padding: 3px 6px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+  color: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  font-family: var(--fd);
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+  flex-shrink: 0;
+  position: relative;
+  margin-right: 4px;
+}
+.sett-btn:hover,
+.sett-btn.sett-btn-active {
+  background: rgba(255, 255, 255, 0.13);
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #fff;
+}
+/* Point jaune = colonnes masquées */
+.sett-btn.sett-has-hidden::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--c-yellow, #f5c400);
+  box-shadow: 0 0 5px rgba(245, 196, 0, 0.6);
+}
+.sett-icon {
+  font-size: 13px;
+  line-height: 1;
+  display: block;
+}
+
+/* ── Panel dropdown ────────────────────────────────── */
+.sett-panel {
+  position: fixed;
+  z-index: 350;
+  background: #0b0d16;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
+  box-shadow: 0 10px 48px rgba(0, 0, 0, 0.85);
+  width: 276px;
+  font-family: var(--fd, "Chakra Petch", monospace);
+  overflow: hidden;
+}
+.sett-panel[hidden] {
+  display: none;
+}
+
+/* ── En-tête panel ─────────────────────────────────── */
+.sett-hdr {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  background: #0f1120;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+.sett-ttl {
+  flex: 1;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  color: #fff;
+  text-transform: uppercase;
+  user-select: none;
+}
+.sett-reset,
+.sett-close {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.35);
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 3px;
+  line-height: 1.5;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
+}
+.sett-reset:hover,
+.sett-close:hover {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* ── Grille 2 colonnes de checkboxes ───────────────── */
+.sett-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  padding: 6px 4px;
+  max-height: 360px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+.sett-grid::-webkit-scrollbar {
+  width: 4px;
+}
+.sett-grid::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 2px;
+}
+
+/* ── Chaque item (label + checkbox) ───────────────── */
+.sett-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 9px;
+  border-radius: 3px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.1s;
+  min-width: 0;
+}
+.sett-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Checkbox native stylée */
+.sett-chk {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 2px;
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+  transition:
+    background 0.12s,
+    border-color 0.12s;
+}
+.sett-chk:checked {
+  background: var(--accent, #e8002d);
+  border-color: var(--accent, #e8002d);
+}
+.sett-chk:checked::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 1px;
+  width: 6px;
+  height: 9px;
+  border: 2px solid #fff;
+  border-top: none;
+  border-left: none;
+  transform: rotate(40deg);
+}
+
+.sett-lbl {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.75);
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.12s;
+}
+/* Label barré quand décoché */
+.sett-item:has(.sett-chk:not(:checked)) .sett-lbl {
+  color: rgba(255, 255, 255, 0.22);
+  text-decoration: line-through;
+}
+
+/* ── Mobile ────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .sett-panel {
+    width: calc(100vw - 12px);
+    right: 6px !important;
+    left: 6px !important;
+  }
+  .sett-grid {
+    max-height: 280px;
+  }
+  .sett-btn {
+    padding: 2px 5px;
+    margin-right: 2px;
+  }
+  .sett-icon {
+    font-size: 11px;
+  }
+}

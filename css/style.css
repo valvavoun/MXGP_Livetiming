@@ -1,0 +1,1448 @@
+/* ═══════════════════════════════════════════════════
+   MXGP Live Timing — style.css
+   TV Broadcast Dark / Motorsport HUD
+═══════════════════════════════════════════════════ */
+:root {
+  /* Backgrounds */
+  --bg: #0a0c10;
+  --bg2: #0e1118;
+  --bg3: #12151f;
+  --bg-row: #0f1219;
+  --bg-row2: #0c0f17;
+  --bg-hover: #161c2a;
+
+  /* Borders */
+  --b1: #1a1f2e;
+  --b2: #252b3d;
+  --b3: #2e3650;
+
+  /* Brand accent */
+  --accent: #e8002d;
+
+  /* Data colours */
+  --c-green: #00cc55;
+  --c-red: #e8354a;
+  --c-orange: #ff7700;
+  --c-orange-dark: #ff3300;
+  --c-purple: #cc00ff;
+  --c-yellow: #f5c400;
+  --c-blue: #2196f3;
+  --c-white: #e5f0dd;
+  --c-muted: #4e566e;
+  --c-dim: #2e3448;
+
+  /* Cell tint backgrounds */
+  --bg-green: rgba(0, 201, 122, 0.13);
+  --bg-red: rgba(232, 53, 74, 0.12);
+  --bg-orange: rgba(255, 119, 0, 0.18);
+  --bg-purple: rgba(204, 0, 255, 0.18);
+
+  /* Fonts */
+  --fd: "Chakra Petch", monospace;
+  --fu: "Barlow Condensed", sans-serif;
+
+  /* Layout */
+  --rh: 44px;
+  --hh: 90px;
+  --cbh: 0px;
+  --sticky-top: calc(var(--hh) + var(--cbh));
+
+  /*
+    20-column grid — géré dynamiquement par settings.js.
+    Les valeurs ci-dessous sont le fallback initial (écrasé dès que
+    settings.js appelle _rebuild() au chargement).
+
+    IMPORTANT : tailles fixes en px (sauf Rider en fr) pour garantir
+    l'alignement parfait entre .thead et .row, qui sont deux grids
+    séparés. Des tracks "auto" seraient calculés indépendamment dans
+    chaque conteneur → désalignement. Les px sont identiques partout.
+
+    Rider : minmax(180px, 1.8fr) — min assez large pour le nom le
+    plus long (~CALVIN VLAANDEREN ~160px à 14px) + marge.
+  */
+  --gc: 50px /* pos */ 72px /* nr */ minmax(180px, 1.8fr) /* rider */ 72px
+    /* nat */ 76px /* bike */ 96px /* time */ 48px /* laps */ 96px
+    /* diff first */ 96px /* diff prev */ 96px /* best lap */ 48px /* in lap */
+    96px /* last lap */ 96px /* last lap 2 */ 96px /* last lap 3 */ 82px
+    /* s1 */ 82px /* s2 */ 82px /* s3 */ 82px /* s4 */ 48px /* delta */ 78px; /* status */
+
+  /* minimum total = somme des min + 180 pour rider */
+  --tbl-min: 1657px;
+}
+
+/* ── Reset ── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+/* overflow-x:clip ≠ overflow-x:hidden :
+   clip ne crée PAS de scroll container → position:sticky reste intact.
+   Il empêche juste que la page soit plus large que le viewport. */
+html {
+  overflow-x: clip;
+}
+body {
+  background: var(--bg);
+  color: var(--c-white);
+  font-family: var(--fu);
+  min-height: 100vh;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.08) 2px,
+    rgba(0, 0, 0, 0.08) 4px
+  );
+}
+
+/* ═══════════════════════════════════
+   HEADER
+═══════════════════════════════════ */
+.hdr {
+  background: linear-gradient(180deg, #0d1020 0%, var(--bg2) 100%);
+  border-bottom: 2px solid var(--b2);
+  padding: 0 20px;
+  /* sticky — MUST be a direct child of body with no overflow:auto/scroll ancestor */
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
+}
+.hdr-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--hh);
+  gap: 16px;
+  position: relative;
+}
+
+/* Left — brand text */
+.hdr-brand {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.brand-cat {
+  font-family: var(--fd);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  line-height: 1;
+  color: var(--c-white);
+}
+.brand-sess {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 3px;
+  color: var(--c-muted);
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+/* Center — absolutely centred so it doesn't shift with content */
+.hdr-center {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+}
+.live-badge.st-connecting .dot {
+  background: var(--c-blue);
+}
+.live-badge.st-connecting .badge-lbl {
+  color: var(--c-blue);
+}
+.live-badge.st-live .dot {
+  background: var(--accent);
+}
+.live-badge.st-live .badge-lbl {
+  color: var(--accent);
+}
+.live-badge.st-finished .dot {
+  background: var(--c-muted);
+}
+.live-badge.st-finished .badge-lbl {
+  color: var(--c-muted);
+}
+.live-badge.st-reconnect .dot {
+  background: var(--c-yellow);
+}
+.live-badge.st-reconnect .badge-lbl {
+  color: var(--c-yellow);
+}
+
+.live-badge {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 14px 4px 10px;
+  border-radius: 3px;
+  transition: all 0.3s;
+}
+.live-badge.st-connecting {
+  background: rgba(33, 150, 243, 0.1);
+  border: 1px solid rgba(33, 150, 243, 0.3);
+}
+.live-badge.st-live {
+  background: rgba(232, 0, 45, 0.1);
+  border: 1px solid rgba(232, 0, 45, 0.4);
+}
+.live-badge.st-finished {
+  background: rgba(78, 86, 110, 0.1);
+  border: 1px solid rgba(78, 86, 110, 0.3);
+}
+.live-badge.st-reconnect {
+  background: rgba(245, 196, 0, 0.1);
+  border: 1px solid rgba(245, 196, 0, 0.3);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.2;
+  }
+}
+.dot.blink {
+  animation: blink 1s ease-in-out infinite;
+}
+
+.badge-lbl {
+  font-family: var(--fd);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 3px;
+}
+.race-clock {
+  display: none;
+}
+.clock-lbl {
+  display: none;
+}
+
+/* Right spacer — flex pour accueillir boutons settings + GP */
+.hdr-right {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 4px;
+  min-width: 80px;
+}
+
+/* ═══════════════════════════════════
+   CONNECTION BAR
+═══════════════════════════════════ */
+.cbar {
+  display: none !important;
+}
+.cbar.live {
+  color: var(--c-green);
+  border-bottom-color: rgba(0, 201, 122, 0.2);
+}
+.cbar.error {
+  color: var(--c-red);
+}
+.cbar.retry {
+  color: var(--c-yellow);
+}
+.cbar-detail {
+  margin-left: auto;
+  font-family: var(--fd);
+  font-size: 10px;
+  color: var(--c-dim);
+}
+
+/* ═══════════════════════════════════
+   THEAD WRAPPER
+   Sticky to viewport. overflow:hidden clips translated .thead.
+   overflow:hidden on the sticky element itself does NOT break sticky —
+   only overflow on an ANCESTOR (scroll container) would.
+═══════════════════════════════════ */
+.thead-wrap {
+  top: var(--sticky-top);
+  z-index: 40;
+  width: 100%;
+  overflow: hidden; /* clips .thead when scrolled — safe for sticky */
+  background: var(--bg2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.thead {
+  display: grid;
+  grid-template-columns: var(--gc);
+  width: 100%;
+  min-width: var(--tbl-min);
+  height: 28px;
+  align-items: center;
+  padding: 0 0px;
+  border-bottom: 2px solid var(--b3);
+  border-left: 3px solid transparent; /* sync avec .row */
+  border-right: 1px solid transparent; /* sync avec .row { border: 1px } → grid content identique des deux côtés → alignement pixel-perfect */
+  will-change: transform;
+}
+
+.ch {
+  font-family: var(--fd);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--c-muted);
+  text-transform: uppercase;
+  white-space: nowrap;
+  user-select: none;
+}
+.ch.c {
+  text-align: center;
+}
+.ch:not(:first-child) {
+  border-left: 1px solid var(--b1);
+  padding-left: 5px;
+}
+
+/* ═══════════════════════════════════
+   TABLE SCROLL CONTAINER
+   overflow-x:auto creates a scroll container (horizontal).
+   This is a SIBLING of thead-wrap, NOT its ancestor —
+   so it does NOT affect thead-wrap's sticky behaviour.
+═══════════════════════════════════ */
+.tbl-wrap {
+  overflow-x: auto;
+  width: 100%;
+  padding-bottom: 16px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--b3) var(--bg);
+}
+.tbl-wrap::-webkit-scrollbar {
+  height: 4px;
+}
+.tbl-wrap::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+.tbl-wrap::-webkit-scrollbar-thumb {
+  background: var(--b3);
+  border-radius: 2px;
+}
+
+/* ═══════════════════════════════════
+   TBODY
+═══════════════════════════════════ */
+.tbody {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-top: 2px;
+  width: 100%;
+  min-width: var(--tbl-min);
+}
+
+/* ═══════════════════════════════════
+   ROWS
+═══════════════════════════════════ */
+.row {
+  display: grid;
+  grid-template-columns: var(--gc);
+  width: 100%;
+  min-width: var(--tbl-min);
+  align-items: center;
+  height: var(--rh);
+  padding: 0 0px;
+  background: var(--bg-row);
+  border: 1px solid transparent;
+  border-left: 3px solid transparent;
+  position: relative;
+  cursor: pointer; /* clickable — Mode Duel (duel.js) */
+  transition:
+    background 0.2s,
+    border-left-color 0.15s;
+}
+.row:nth-child(even) {
+  background: var(--bg-row2);
+}
+/* Hover supprimé — la sélection se fait par clic (Mode Duel) */
+
+/* Podium accent — left border + subtle gradient */
+.row.p1 {
+  border-left-color: var(--c-yellow) !important;
+  background: linear-gradient(
+    90deg,
+    rgba(245, 196, 0, 0.09) 0%,
+    var(--bg-row) 45%
+  ) !important;
+}
+.row.p2 {
+  border-left-color: #aaaaaa !important;
+  background: linear-gradient(
+    90deg,
+    rgba(180, 180, 180, 0.09) 0%,
+    var(--bg-row) 45%
+  ) !important;
+}
+.row.p3 {
+  border-left-color: #b87333 !important;
+  background: linear-gradient(
+    90deg,
+    rgba(184, 115, 51, 0.09) 0%,
+    var(--bg-row) 45%
+  ) !important;
+}
+.row.p1:nth-child(even) {
+  background: linear-gradient(
+    90deg,
+    rgba(245, 196, 0, 0.09) 0%,
+    var(--bg-row2) 45%
+  ) !important;
+}
+.row.p2:nth-child(even) {
+  background: linear-gradient(
+    90deg,
+    rgba(180, 180, 180, 0.07) 0%,
+    var(--bg-row2) 45%
+  ) !important;
+}
+.row.p3:nth-child(even) {
+  background: linear-gradient(
+    90deg,
+    rgba(184, 115, 51, 0.07) 0%,
+    var(--bg-row2) 45%
+  ) !important;
+}
+
+/* Flash on update — disabled */
+
+/* Best section times special row */
+.row.bst-row {
+  background: rgba(160, 0, 220, 0.08);
+  border-top: 1px solid rgba(160, 0, 220, 0.25);
+  border-left-color: var(--c-purple) !important;
+}
+.row.bst-row .cell {
+  color: var(--c-muted);
+  font-size: 15px;
+  letter-spacing: 1px;
+}
+
+/* ═══════════════════════════════════
+   CELLS — generic
+═══════════════════════════════════ */
+.cell {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  height: 100%;
+  padding: 0 7px;
+  font-family: var(--fu);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--c-white);
+  white-space: nowrap;
+}
+.cell.c {
+  justify-content: center;
+  text-align: center;
+}
+.cell:not(:first-child) {
+  border-left: 1px solid var(--b1);
+}
+
+/* ── Pos ── */
+.c-pos {
+  font-family: var(--fd);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--c-muted);
+  justify-content: center;
+  transition: background 0.3s;
+}
+.row.p1 .c-pos {
+  color: var(--c-yellow);
+}
+.row.p2 .c-pos {
+  color: #c0c0c0;
+}
+.row.p3 .c-pos {
+  color: #cd7f32;
+}
+
+/* Position change indicator — animated transition */
+.c-pos {
+  transition:
+    background 0.4s ease,
+    color 0.4s ease;
+}
+.c-pos.pos-gained {
+  background: rgba(0, 201, 122, 0.35) !important;
+  color: var(--c-green) !important;
+}
+.c-pos.pos-lost {
+  background: rgba(232, 53, 74, 0.28) !important;
+  color: var(--c-red) !important;
+}
+
+/* ── Nr badge — coloured by bike brand ── */
+.c-nr {
+  justify-content: center;
+}
+.nr-badge {
+  background: var(--nr-bg, var(--bg3));
+  border: 1px solid var(--nr-bg, var(--b3));
+  border-radius: 3px;
+  width: 36px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--fd);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--nr-fg, var(--c-white));
+}
+
+/* Leader du championnat : contour blanc espacé autour du badge */
+.nr-badge.champ-leader {
+  outline: 2px solid #cc0000;
+  outline-offset: 2px;
+}
+
+/* ── Rider — left padding so text doesn't touch border ── */
+.c-rider {
+  gap: 0;
+  overflow: visible;
+  padding-left: 8px;
+}
+.rider-fn {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--c-muted);
+  margin-right: 5px;
+}
+.rider-ln {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: var(--c-white);
+}
+
+/* ── Nation / Bike ── */
+.c-nat {
+  font-family: var(--fd);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--c-muted);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.c-bike {
+  font-family: var(--fd);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--nr-fg, var(--c-white));
+  text-transform: uppercase;
+  justify-content: center;
+}
+
+/* ── Time / Laps ── */
+.c-time {
+  font-family: var(--fd);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--c-muted);
+  justify-content: center;
+}
+.c-laps {
+  font-family: var(--fd);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--c-muted);
+  justify-content: center;
+}
+
+/* ── Diff First ── */
+.c-df {
+  font-family: var(--fd);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--c-muted);
+  justify-content: center;
+}
+.c-df.leader-val {
+  color: var(--c-yellow);
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+/* ── Diff Prev (server colour) ── */
+.c-dp {
+  font-family: var(--fd);
+  font-size: 15px;
+  font-weight: 700;
+  justify-content: center;
+  padding: 0 4px;
+}
+.c-dp.dp-red {
+  color: var(--c-red);
+  background-color: transparent;
+  background-image: linear-gradient(var(--bg-red), var(--bg-red));
+  background-size: calc(100% - 2px) calc(100% - 2px);
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.c-dp.dp-green {
+  color: var(--c-green);
+  background-color: transparent;
+  background-image: linear-gradient(var(--bg-green), var(--bg-green));
+  background-size: calc(100% - 2px) calc(100% - 2px);
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.c-dp.dp-orange {
+  color: var(--c-orange);
+  background-color: transparent;
+  background-image: linear-gradient(var(--bg-orange), var(--bg-orange));
+  background-size: calc(100% - 2px) calc(100% - 2px);
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.c-dp.dp-orange2 {
+  color: var(--c-orange-dark);
+  background-color: transparent;
+  background-image: linear-gradient(
+    rgba(255, 51, 0, 0.18),
+    rgba(255, 51, 0, 0.18)
+  );
+  background-size: calc(100% - 2px) calc(100% - 2px);
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.c-dp.dp-none {
+  color: var(--c-muted);
+}
+
+/* ── Best Lap ── */
+.c-best {
+  font-family: var(--fd);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--c-muted);
+  justify-content: center;
+}
+.c-best.ob {
+  color: var(--c-purple);
+  text-shadow: 0 0 8px rgba(204, 0, 255, 0.4);
+}
+
+/* ── In Lap ── */
+.c-inlap {
+  font-family: var(--fd);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--c-dim);
+  justify-content: center;
+}
+
+/* ── Last Laps (server colour) ── */
+.c-ll {
+  font-family: var(--fd);
+  font-size: 15px;
+  font-weight: 700;
+  justify-content: center;
+  padding: 0 4px;
+}
+.c-ll.ll-red {
+  color: var(--c-red);
+  background-color: transparent;
+  background-image: linear-gradient(var(--bg-red), var(--bg-red));
+  background-size: calc(100% - 2px) calc(100% - 2px);
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.c-ll.ll-green {
+  color: var(--c-green);
+  background-color: transparent;
+  background-image: linear-gradient(var(--bg-green), var(--bg-green));
+  background-size: calc(100% - 2px) calc(100% - 2px);
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.c-ll.ll-purple {
+  color: var(--c-purple);
+  background-color: transparent;
+  background-image: linear-gradient(var(--bg-purple), var(--bg-purple));
+  background-size: calc(100% - 2px) calc(100% - 2px);
+  background-position: center;
+  background-repeat: no-repeat;
+  text-shadow: 0 0 8px rgba(204, 0, 255, 0.4);
+}
+.c-ll.ll-none {
+  color: var(--c-muted);
+}
+
+/* ── Sector cells ── */
+.c-sec {
+  font-family: var(--fd);
+  font-size: 15px;
+  font-weight: 700;
+  justify-content: center;
+  padding: 0 3px;
+  position: relative;
+}
+/* sec-best   → purple (session best, only 1 rider) */
+.c-sec.sec-best {
+  color: var(--c-purple);
+  background-color: transparent;
+  background-image: linear-gradient(var(--bg-purple), var(--bg-purple));
+  background-size: calc(100% - 2px) calc(100% - 2px);
+  background-position: center;
+  background-repeat: no-repeat;
+}
+/* sec-good   → green (personal best this session) */
+.c-sec.sec-good {
+  color: #00cc55;
+  background-color: transparent;
+  background-image: linear-gradient(
+    rgba(0, 204, 85, 0.1),
+    rgba(0, 204, 85, 0.1)
+  );
+  background-size: calc(100% - 2px) calc(100% - 2px);
+  background-position: center;
+  background-repeat: no-repeat;
+}
+/* sec-none   → muted default */
+.c-sec.sec-none {
+  color: var(--c-muted);
+}
+/* active sector (rider currently on track in this sector) */
+.c-sec.sec-active {
+  box-shadow:
+    inset 0 0 0 1px rgba(33, 150, 243, 0.7),
+    inset 0 0 8px rgba(33, 150, 243, 0.18);
+}
+
+/* Best section times row */
+.bst-row .c-sec {
+  color: var(--c-purple) !important;
+  background: var(--bg-purple) !important;
+  font-size: 15px;
+  font-weight: 700;
+}
+.bst-row .c-sec.magenta {
+  color: #ff00ff;
+  background: rgba(255, 0, 255, 0.15);
+}
+
+/* ── Delta position ── */
+.c-delta {
+  font-family: var(--fd);
+  font-size: 15px;
+  font-weight: 700;
+  justify-content: center;
+  padding: 0 3px;
+}
+.c-delta.dt-up {
+  color: var(--c-green);
+}
+.c-delta.dt-down {
+  color: var(--c-red);
+}
+.c-delta.dt-same {
+  color: var(--c-muted);
+}
+
+/* ── Status / Last Passing ── */
+.c-pass {
+  font-family: var(--fd);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: var(--c-muted);
+  text-transform: uppercase;
+  justify-content: center;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+}
+.c-pass.finish {
+  color: var(--c-green);
+}
+
+/* ═══════════════════════════════════
+   BEST LAP FOOTER
+═══════════════════════════════════ */
+.bestlap-bar {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: linear-gradient(
+    90deg,
+    rgba(204, 0, 255, 0.1) 0%,
+    transparent 60%
+  );
+  border-top: 1px solid rgba(204, 0, 255, 0.25);
+  font-family: var(--fd);
+  font-size: 15px;
+  letter-spacing: 1px;
+  flex-wrap: wrap;
+}
+.bestlap-bar.show {
+  display: flex;
+}
+.bl-prefix {
+  color: var(--c-muted);
+  font-size: 15px;
+}
+.bl-num {
+  color: var(--c-purple);
+  font-weight: 700;
+}
+.bl-name {
+  color: var(--c-white);
+  font-weight: 700;
+  margin: 0 6px;
+}
+.bl-time {
+  color: var(--c-purple);
+  font-size: 15px;
+  font-weight: 700;
+  text-shadow: 0 0 10px rgba(204, 0, 255, 0.5);
+}
+.bl-lap {
+  color: var(--c-muted);
+  font-size: 15px;
+}
+
+/* ═══════════════════════════════════
+   LOADING
+═══════════════════════════════════ */
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 80px 20px;
+  min-width: max-content;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.spin {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 3px solid var(--b3);
+  border-top-color: var(--accent);
+  animation: spin 0.7s linear infinite;
+}
+.load-txt {
+  font-family: var(--fd);
+  font-size: 15px;
+  letter-spacing: 3px;
+  color: var(--c-muted);
+}
+
+/* ═══════════════════════════════════
+   TICKER
+═══════════════════════════════════ */
+.ticker {
+  display: none;
+}
+.t-cat {
+  padding: 0 12px;
+  font-family: var(--fd);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--accent);
+  border-right: 1px solid var(--b2);
+  white-space: nowrap;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+.t-scroll {
+  overflow: hidden;
+  flex: 1;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 2%,
+    black 98%,
+    transparent
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 2%,
+    black 98%,
+    transparent
+  );
+}
+.t-inner {
+  display: flex;
+  gap: 48px;
+  white-space: nowrap;
+  animation: tmove 38s linear infinite;
+}
+@keyframes tmove {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.ti {
+  font-family: var(--fd);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--c-muted);
+}
+.ti strong {
+  color: var(--c-white);
+}
+.ti .tg {
+  color: var(--c-green);
+}
+.ti .tp {
+  color: var(--c-purple);
+}
+.ti .ty {
+  color: var(--c-yellow);
+}
+
+/* ═══════════════════════════════════
+   DELAY CONTROL
+═══════════════════════════════════ */
+.delay-btn {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--bg2);
+  border: 2px solid var(--b2);
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: var(--fd);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--c-muted);
+  transition:
+    border-color 0.2s,
+    color 0.2s;
+  user-select: none;
+  pointer-events: auto;
+}
+.delay-btn * {
+  pointer-events: none;
+}
+.delay-btn:hover {
+  border-color: var(--b3);
+  color: var(--c-white);
+}
+.delay-btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.delay-icon {
+  font-size: 14px;
+}
+
+.delay-panel {
+  position: fixed;
+  bottom: 60px;
+  right: 16px;
+  z-index: 998;
+  background: var(--bg2);
+  border: 1px solid var(--b3);
+  border-radius: 6px;
+  padding: 14px;
+  width: 210px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  pointer-events: auto;
+}
+.delay-panel[hidden] {
+  display: none;
+}
+
+.delay-panel-title {
+  font-family: var(--fd);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--c-muted);
+  margin-bottom: 10px;
+}
+.delay-presets {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.delay-preset {
+  font-family: var(--fd);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 5px 10px;
+  background: var(--bg3);
+  border: 1px solid var(--b2);
+  border-radius: 3px;
+  color: var(--c-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.delay-preset:hover {
+  border-color: var(--b3);
+  color: var(--c-white);
+}
+.delay-preset.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.delay-custom-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.delay-input {
+  flex: 1;
+  font-family: var(--fd);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 5px 8px;
+  background: var(--bg3);
+  border: 1px solid var(--b2);
+  border-radius: 3px;
+  color: var(--c-white);
+  width: 100%;
+}
+.delay-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.delay-apply {
+  font-family: var(--fd);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 5px 12px;
+  background: var(--b3);
+  border: 1px solid var(--b3);
+  border-radius: 3px;
+  color: var(--c-white);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.delay-apply:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.delay-status {
+  font-family: var(--fd);
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: var(--c-muted);
+  text-align: center;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 28px;
+  padding: 10px 8px;
+  border-radius: 4px;
+  background: rgba(232, 0, 45, 0.08);
+  border: 1px solid rgba(232, 0, 45, 0.2);
+}
+.delay-status.on {
+  color: var(--accent);
+  background: rgba(232, 0, 45, 0.18);
+  border-color: rgba(232, 0, 45, 0.5);
+  font-weight: 600;
+}
+.delay-status.on strong {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent);
+  font-family: var(--fd);
+}
+.delay-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(232, 0, 45, 0.3);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin-delay 0.8s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin-delay {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.race-clock.clock-urgent {
+  color: var(--accent);
+}
+.race-clock.clock-finished {
+  color: var(--c-muted);
+}
+.clock-lbl.lbl-accent {
+  color: var(--accent);
+}
+.clock-lbl.lbl-muted {
+  color: var(--c-muted);
+}
+
+/* ── Nation code fallback (nation inconnue) ── */
+.nat-code {
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--c-muted);
+}
+
+/* ── Séparateur ticker ── */
+.t-sep {
+  color: var(--c-dim);
+  padding: 0 8px;
+}
+
+.flag-img {
+  display: block;
+  border-radius: 1px;
+}
+
+/* ── Best section times label cell ── */
+.bst-label {
+  /* Le span est calculé dynamiquement par Settings.fixBstLabels()
+     en fonction du nombre de colonnes visibles avant S1.
+     Fallback : span 14 (tous les colonnes visibles) */
+  grid-column: span 14;
+  font-family: var(--fd);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--c-muted);
+  justify-content: flex-end;
+  padding-right: 8px;
+  border-left: none;
+}
+
+/* Mobile: Best section times row improvement */
+@media (max-width: 768px) {
+  .bst-row {
+    display: flex !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    background: rgba(160, 0, 220, 0.12) !important;
+    padding: 4px 0;
+    height: auto;
+  }
+  .bst-label {
+    grid-column: unset !important;
+    flex: 0 0 auto;
+    justify-content: flex-start;
+    padding: 4px 6px;
+    border: none;
+    font-size: 9px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .bst-row .c-sec {
+    flex: 0 0 82px;
+    padding: 4px 2px;
+    font-size: 13px;
+  }
+  /* Masquer delta et status dans la bst-row sur mobile — toujours vides */
+  .bst-row [data-col="delta"],
+  .bst-row [data-col="status"] {
+    display: none !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   RESPONSIVE — colonnes adaptées à la taille de l'écran
+   
+   Desktop  (> 1100px) : 20 colonnes — tout affiché
+   Tablet   (≤ 1100px) : 17 colonnes — retire LL2, LL3, Status  
+   Mobile L (≤ 768px)  : 14 colonnes — retire aussi Diff.Prv, In Lap, Delta
+   Mobile S (≤ 480px)  : 11 colonnes — retire aussi Nat, Bike, Time
+══════════════════════════════════════════════════════════ */
+
+/* ── TABLET (≤ 1100px) ── tailles réduites uniquement
+   La visibilité des colonnes est gérée par settings.js */
+@media (max-width: 1100px) {
+  :root {
+    --hh: 80px;
+    --rh: 40px;
+  }
+
+  .brand-cat {
+    font-size: 18px;
+  }
+  .brand-sess {
+    font-size: 9px;
+    letter-spacing: 2px;
+  }
+  .race-clock {
+    font-size: 28px;
+  }
+  .badge-lbl {
+    font-size: 13px;
+  }
+}
+
+/* ── MOBILE LARGE (≤ 768px) ── tailles réduites uniquement
+   La visibilité des colonnes est gérée par settings.js */
+@media (max-width: 768px) {
+  :root {
+    --hh: 70px;
+    --rh: 44px;
+  }
+
+  /* Rider cell: clip overflow, shrink font so long names don't bleed */
+  .c-rider {
+    overflow: hidden;
+  }
+  .rider-fn {
+    font-size: 13px;
+  }
+  .rider-ln {
+    font-size: 13px;
+  }
+
+  .hdr {
+    padding: 0 10px;
+  }
+  .brand-cat {
+    font-size: 15px;
+    letter-spacing: 2px;
+    flex-shrink: 0;
+  }
+  .brand-sess {
+    font-size: 8px;
+    letter-spacing: 1.5px;
+    max-width: 150px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .race-clock {
+    font-size: 22px;
+    letter-spacing: 3px;
+  }
+  .badge-lbl {
+    font-size: 11px;
+    letter-spacing: 2px;
+  }
+  .hdr-right {
+    min-width: 50px;
+  }
+
+  .ticker {
+    height: 28px;
+  }
+  .t-cat {
+    font-size: 11px;
+    padding: 0 8px;
+  }
+  .ti {
+    font-size: 12px;
+  }
+
+  .delay-btn {
+    bottom: 16px;
+    right: 8px;
+    padding: 4px 8px;
+    font-size: 11px;
+    gap: 4px;
+  }
+  .delay-icon {
+    font-size: 11px;
+  }
+  .delay-panel {
+    right: 8px;
+    bottom: 52px;
+    width: calc(100vw - 16px);
+    max-width: 260px;
+    padding: 10px;
+  }
+  .delay-panel-title {
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    margin-bottom: 8px;
+  }
+  .delay-preset {
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+  .delay-input {
+    font-size: 12px;
+    padding: 4px 6px;
+  }
+  .delay-apply {
+    font-size: 12px;
+    padding: 4px 10px;
+  }
+  .delay-status {
+    font-size: 10px;
+    padding: 6px 6px;
+    min-height: 24px;
+  }
+
+  .cbar {
+    font-size: 10px;
+    padding: 4px 10px;
+    min-height: 24px;
+  }
+  .cbar-detail {
+    display: none;
+  }
+
+  .bestlap-bar {
+    font-size: 11px;
+    padding: 5px 10px;
+    gap: 6px;
+  }
+  .bl-prefix {
+    font-size: 9px;
+  }
+}
+
+/* ── MOBILE SMALL (≤ 480px) ── tailles réduites uniquement
+   La visibilité des colonnes est gérée par settings.js */
+@media (max-width: 480px) {
+  :root {
+    --hh: 60px;
+    --rh: 46px;
+  }
+
+  .c-rider {
+    overflow: hidden;
+  }
+  .rider-fn {
+    font-size: 12px;
+  }
+  .rider-ln {
+    font-size: 12px;
+  }
+
+  .hdr {
+    padding: 0 8px;
+  }
+  .brand-cat {
+    font-size: 14px;
+    letter-spacing: 1.5px;
+    flex-shrink: 1;
+    min-width: 0;
+  }
+  .brand-sess {
+    font-size: 8px;
+    max-width: 110px;
+    letter-spacing: 1px;
+  }
+  .race-clock {
+    font-size: 18px;
+    letter-spacing: 2px;
+  }
+  .badge-lbl {
+    font-size: 10px;
+    letter-spacing: 1.5px;
+  }
+  .live-badge {
+    padding: 3px 8px 3px 7px;
+    gap: 5px;
+  }
+  .dot {
+    width: 6px;
+    height: 6px;
+  }
+  .hdr-right {
+    min-width: 32px;
+  }
+  .hdr-center {
+    gap: 2px;
+  }
+
+  .ticker {
+    height: 26px;
+  }
+  .t-cat {
+    font-size: 10px;
+    padding: 0 6px;
+  }
+  .ti {
+    font-size: 10px;
+  }
+
+  .delay-btn {
+    bottom: 33px;
+    right: 6px;
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+  .delay-panel {
+    right: 6px;
+    bottom: 68px;
+  }
+
+  .cbar {
+    font-size: 9px;
+    padding: 3px 8px;
+  }
+}
+
+/* ── iPhone SE & ultra small (≤ 360px) ── */
+@media (max-width: 360px) {
+  .brand-cat {
+    font-size: 12px;
+    letter-spacing: 1px;
+  }
+  .brand-sess {
+    font-size: 7px;
+    letter-spacing: 0.8px;
+    max-width: 90px;
+    margin-top: 2px;
+  }
+  .race-clock {
+    font-size: 16px;
+  }
+}
+
+/* ── Écrans tactiles : rows plus hautes, boutons plus grands ── */
+@media (pointer: coarse) {
+  :root {
+    --rh: 50px;
+  }
+  .delay-preset {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+}

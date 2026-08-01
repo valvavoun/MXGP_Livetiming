@@ -1,0 +1,1315 @@
+/* ══════════════════════════════════════════════════════
+   GP STANDINGS — gp.css  v2.0  (Multi-GP + Saison)
+   Layout : sidebar liste GPs  +  zone principale
+   Sidebar mobile : bande horizontale scrollable en haut
+══════════════════════════════════════════════════════ */
+
+/* ── Bouton header ─────────────────────────────────── */
+.gp-hdr-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-family: var(--fd, "Barlow Condensed", sans-serif);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  margin-right: 4px;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+.gp-hdr-btn:hover {
+  background: rgba(255, 255, 255, 0.13);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+.gp-hdr-btn.gp-btn-active {
+  background: rgba(245, 196, 0, 0.15);
+  border-color: rgba(245, 196, 0, 0.5);
+  color: var(--c-yellow, #f5c400);
+}
+.gp-hdr-icon {
+  font-size: 11px;
+  line-height: 1;
+}
+.gp-hdr-lbl {
+  font-size: 10px;
+}
+.gp-hdr-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--c-yellow, #f5c400);
+  flex-shrink: 0;
+  display: none;
+}
+.gp-hdr-btn.has-data .gp-hdr-dot {
+  display: block;
+}
+
+/* ── Panel plein-écran ─────────────────────────────── */
+.gp-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: #080a12;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-8px);
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
+  font-family: var(--fd, "Barlow Condensed", sans-serif);
+  overflow: hidden; /* scroll géré en interne */
+}
+.gp-panel.gp-visible {
+  opacity: 1;
+  pointer-events: all;
+  transform: translateY(0);
+}
+
+/* ── Topbar ────────────────────────────────────────── */
+.gp-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px 8px;
+  background: #0c0f1e;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  flex-shrink: 0;
+  gap: 12px;
+}
+.gp-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+.gp-topbar-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.gp-topbar-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: #fff;
+  text-transform: uppercase;
+}
+.gp-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.gp-sync-indicator {
+  display: none !important;
+}
+
+.gp-close {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 3px 9px;
+  border-radius: 3px;
+  font-family: inherit;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
+  flex-shrink: 0;
+}
+.gp-close:hover {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* ════════════════════════════════════════════════════
+   LAYOUT : sidebar + main côte à côte
+════════════════════════════════════════════════════ */
+.gp-layout {
+  display: flex;
+  flex: 1;
+  min-height: 0; /* permet overflow-y sur les enfants */
+  overflow: hidden;
+}
+
+/* ── SIDEBAR ───────────────────────────────────────── */
+.gp-sidebar {
+  width: 210px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  background: #060810;
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+}
+.gp-sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+.gp-sidebar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+/* Bouton SAISON */
+.gp-sb-season {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.45);
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 11px 12px;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+.gp-sb-season:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+}
+.gp-sb-season.gp-sb-active {
+  background: rgba(245, 196, 0, 0.08);
+  color: var(--c-yellow, #f5c400);
+  border-left: 2px solid var(--c-yellow, #f5c400);
+}
+.gp-sb-season-icon {
+  font-size: 12px;
+}
+.gp-sb-season-lbl {
+  font-size: 10px;
+}
+
+/* Divider entre SAISON et les GPs */
+.gp-sb-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.05);
+  margin: 0;
+}
+
+/* Entrée GP */
+.gp-sb-entry {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-left: 2px solid transparent;
+  color: rgba(255, 255, 255, 0.5);
+  font-family: inherit;
+  text-align: left;
+  padding: 9px 12px 8px 10px;
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    color 0.12s,
+    border-color 0.12s;
+}
+.gp-sb-entry:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.85);
+}
+.gp-sb-entry.gp-sb-active {
+  background: rgba(232, 0, 45, 0.07);
+  border-left-color: var(--accent, #e8002d);
+  color: #fff;
+}
+/* Semaine courante : léger highlight bleu */
+.gp-sb-entry.gp-sb-current {
+  background: rgba(255, 255, 255, 0.025);
+}
+.gp-sb-entry.gp-sb-current.gp-sb-active {
+  background: rgba(232, 0, 45, 0.1);
+}
+
+.gp-sb-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.gp-sb-round {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: rgba(255, 255, 255, 0.25);
+  text-transform: uppercase;
+}
+.gp-sb-entry.gp-sb-active .gp-sb-round {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.gp-sb-live {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #00cc55;
+  background: rgba(0, 204, 85, 0.12);
+  border: 1px solid rgba(0, 204, 85, 0.3);
+  border-radius: 2px;
+  padding: 0px 4px;
+  animation: gp-live-pulse 2s ease-in-out infinite;
+}
+
+.gp-sb-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.75);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  max-width: 186px;
+}
+.gp-sb-name-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.gp-sb-name-text {
+  display: inline-block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gp-sb-name .flag-img,
+.gp-sb-name .nat-code {
+  width: 18px;
+  height: 12px;
+  flex-shrink: 0;
+  border-radius: 2px;
+  object-fit: cover;
+}
+.gp-sb-entry.gp-sb-active .gp-sb-name {
+  color: #fff;
+}
+
+.gp-sb-date {
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.gp-sb-cats {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+.gp-sb-cat {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(232, 0, 45, 0.2);
+  border: 1px solid rgba(232, 0, 45, 0.35);
+  border-radius: 2px;
+  padding: 1px 5px;
+}
+.gp-sb-entry.gp-sb-active .gp-sb-cat {
+  color: #fff;
+  background: rgba(232, 0, 45, 0.3);
+  border-color: rgba(232, 0, 45, 0.6);
+}
+
+.gp-sb-empty {
+  padding: 20px 12px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.18);
+  text-align: center;
+}
+
+/* ── ZONE PRINCIPALE ───────────────────────────────── */
+.gp-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* ── Cat bar ───────────────────────────────────────── */
+.gp-cat-bar {
+  display: flex;
+  align-items: center;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  flex-shrink: 0;
+  gap: 0;
+}
+.gp-cat-bar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Séparateur vertical entre années et cats */
+.gp-cat-sep {
+  width: 1px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+  margin: 0 4px;
+}
+
+/* Wrapper années (saison) */
+.gp-season-year-sel {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* Bouton catégorie / année */
+.gp-cat-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: rgba(255, 255, 255, 0.35);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 9px 12px 8px;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.gp-cat-btn:hover {
+  color: rgba(255, 255, 255, 0.7);
+}
+.gp-cat-btn.gp-cat-has {
+  color: rgba(255, 255, 255, 0.6);
+}
+.gp-cat-btn.gp-cat-active {
+  color: #fff;
+  border-bottom-color: var(--cat-c, var(--accent, #e8002d));
+}
+.gp-cat-btn.gp-cat-has.gp-cat-active {
+  color: #fff;
+}
+.gp-cat-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--c-green, #00cc55);
+  flex-shrink: 0;
+}
+
+/* ── Tabs bar ──────────────────────────────────────── */
+.gp-tabs-bar {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.gp-tabs-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.gp-tabs {
+  display: flex;
+  gap: 2px;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+
+.gp-tab {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: rgba(255, 255, 255, 0.35);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 5px 10px 7px;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.gp-tab:hover {
+  color: rgba(255, 255, 255, 0.7);
+}
+.gp-tab.gp-tab-has {
+  color: rgba(255, 255, 255, 0.6);
+}
+.gp-tab.gp-tab-active {
+  color: #fff;
+  border-bottom-color: var(--c-yellow, #f5c400);
+}
+.gp-tab.gp-tab-has.gp-tab-active {
+  color: #fff;
+}
+.gp-tab.gp-tab-auto::after {
+  display: none;
+}
+
+/* ── Toolbar supprimé — capture button déplacé dans le topbar ── */
+.gp-toolbar {
+  display: none;
+}
+.gp-name-input {
+  display: none;
+}
+
+.gp-capture-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  color: rgba(255, 255, 255, 0.3);
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1;
+  padding: 2px 6px;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
+  flex-shrink: 0;
+}
+.gp-capture-btn:hover {
+  color: rgba(255, 255, 255, 0.7);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+/* ── Body scrollable ───────────────────────────────── */
+.gp-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px 16px 40px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+.gp-body::-webkit-scrollbar {
+  width: 6px;
+}
+.gp-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.13);
+  border-radius: 3px;
+}
+
+/* ─── Wrapper scroll horizontal ─────────────────── */
+.gp-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+.gp-table-wrap .gp-table {
+  min-width: 340px;
+}
+
+/* ════════════════════════════════════════════════════
+   EN-TÊTES
+════════════════════════════════════════════════════ */
+.gp-gp-header {
+  margin-bottom: 14px;
+}
+.gp-gp-name {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #fff;
+  text-transform: uppercase;
+}
+
+.gp-race-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.gp-race-label {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #fff;
+  text-transform: uppercase;
+}
+.gp-race-cat {
+  font-size: 11px;
+  color: var(--c-yellow, #f5c400);
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+.gp-race-ts {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.25);
+  letter-spacing: 0.5px;
+}
+.gp-race-auto {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--c-green, #00cc55);
+  background: rgba(0, 204, 85, 0.1);
+  border: 1px solid rgba(0, 204, 85, 0.25);
+  border-radius: 3px;
+  padding: 2px 6px;
+  text-transform: uppercase;
+}
+
+/* ════════════════════════════════════════════════════
+   TABLEAU RÉSULTATS (commun à toutes les vues)
+════════════════════════════════════════════════════ */
+.gp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.gp-table th {
+  text-align: left;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.3);
+  padding: 5px 8px 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+.gp-table th:last-child {
+  text-align: left;
+}
+.gp-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.8);
+  vertical-align: middle;
+}
+.gp-table tr:hover td {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+/* Podium */
+.gp-pos-1 td {
+  color: #fff;
+}
+.gp-pos-1 .gp-td-pos {
+  color: var(--c-yellow, #f5c400);
+  font-weight: 700;
+  font-size: 15px;
+}
+.gp-pos-2 .gp-td-pos {
+  color: #aaa;
+  font-weight: 700;
+}
+.gp-pos-3 .gp-td-pos {
+  color: #cd7f32;
+  font-weight: 700;
+}
+
+.gp-td-pos {
+  width: 36px;
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.5);
+}
+.gp-td-name {
+  min-width: 120px;
+}
+.gp-td-bike {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.35);
+  letter-spacing: 0.5px;
+}
+.gp-td-total {
+  text-align: right;
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.5px;
+}
+.gp-td-total-all {
+  text-align: right;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--c-yellow, #f5c400);
+  opacity: 0.85;
+}
+.gp-td-ptsrace {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+}
+.gp-td-qr {
+  color: rgba(255, 255, 255, 0.35) !important;
+}
+.gp-td-diff {
+  text-align: right;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.4);
+  letter-spacing: 0.3px;
+}
+.gp-td-diff.gp-diff-leader {
+  color: rgba(255, 255, 255, 0.15);
+  font-size: 12px;
+}
+.gp-td-diff.gp-diff-close {
+  color: var(--c-red, #ff4040);
+  font-weight: 700;
+}
+
+.gp-fn {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 11px;
+  margin-right: 4px;
+}
+.gp-ln {
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  font-size: 13px;
+}
+.gp-nr {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.25);
+  margin-left: 5px;
+}
+
+.gp-pts {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  margin-right: 3px;
+}
+.gp-pts-qr {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.4);
+  margin-right: 3px;
+}
+.gp-racepos {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.25);
+}
+.gp-col-total {
+  text-align: right !important;
+}
+.gp-col-diff {
+  text-align: right !important;
+}
+
+/* ════════════════════════════════════════════════════
+   SEASON STANDINGS
+════════════════════════════════════════════════════ */
+.gp-season-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.gp-season-title {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #fff;
+  text-transform: uppercase;
+}
+.gp-season-sub {
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.25);
+}
+
+/* Table saison : scroll horizontal toujours visible */
+.gp-season-wrap {
+  overflow-x: auto;
+}
+.gp-season-table {
+  min-width: 500px;
+}
+
+/* Colonne par GP */
+.gp-col-gp {
+  text-align: center !important;
+  white-space: nowrap;
+  min-width: 72px;
+  max-width: 110px;
+}
+
+/* Cellule résultat GP dans le tableau saison */
+.gp-td-gp {
+  text-align: center;
+  vertical-align: middle;
+  min-width: 72px;
+}
+.gp-td-gp-abs {
+  color: rgba(255, 255, 255, 0.12) !important;
+}
+
+.gp-sea-total {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.1;
+}
+.gp-sea-detail {
+  display: block;
+  font-size: 9px;
+  letter-spacing: 0.3px;
+  color: rgba(255, 255, 255, 0.28);
+  white-space: nowrap;
+}
+.gp-sea-detail small {
+  font-size: 8px;
+}
+
+/* ════════════════════════════════════════════════════
+   BADGES / STATUTS
+════════════════════════════════════════════════════ */
+.gp-live-badge {
+  background: rgba(0, 204, 85, 0.1) !important;
+  border-color: rgba(0, 204, 85, 0.35) !important;
+  color: #00cc55 !important;
+  animation: gp-live-pulse 2s ease-in-out infinite;
+}
+@keyframes gp-live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+.gp-live-age {
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.2);
+  font-style: italic;
+}
+
+/* Messages vides */
+.gp-empty {
+  margin-top: 60px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.2);
+  font-size: 13px;
+  line-height: 2;
+  letter-spacing: 0.5px;
+}
+
+/* Notes */
+.gp-qr-note,
+.gp-preview-note {
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.2);
+  margin-top: 10px;
+  font-style: italic;
+}
+
+/* ── Toast (dans le panel) ─────────────────────────── */
+.gp-toast {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  background: rgba(20, 25, 45, 0.97);
+  border: 1px solid rgba(0, 204, 85, 0.35);
+  color: #fff;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  padding: 8px 18px;
+  border-radius: 4px;
+  white-space: pre-line;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
+  z-index: 10;
+}
+.gp-toast.gp-toast-show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.gp-toast.gp-toast-warn {
+  border-color: rgba(245, 196, 0, 0.4);
+}
+
+/* ── Notif flottante (hors panel) ─────────────────── */
+.gp-notif {
+  position: fixed;
+  bottom: 70px;
+  left: 50%;
+  transform: translateX(-50%) translateY(6px);
+  background: rgba(10, 18, 40, 0.97);
+  border: 1px solid rgba(0, 204, 85, 0.4);
+  border-left: 3px solid var(--c-green, #00cc55);
+  color: #fff;
+  font-family: var(--fd, "Barlow Condensed", sans-serif);
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  padding: 8px 20px;
+  border-radius: 4px;
+  z-index: 600;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.25s,
+    transform 0.25s;
+  white-space: nowrap;
+  max-width: calc(100vw - 32px);
+  text-align: center;
+}
+.gp-notif.gp-notif-show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ════════════════════════════════════════════════════
+   MOBILE  (≤ 600px)
+   Sidebar → bande horizontale scrollable en haut
+════════════════════════════════════════════════════ */
+@media (max-width: 600px) {
+  /* Layout devient colonne */
+  .gp-layout {
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  /* Sidebar horizontale */
+  .gp-sidebar {
+    width: 100%;
+    height: auto;
+    max-height: 108px;
+    flex-direction: row;
+    align-items: stretch;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    scrollbar-width: none;
+  }
+  .gp-sidebar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* SAISON : bouton compact horizontal */
+  .gp-sb-season {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    width: 64px;
+    min-width: 64px;
+    flex-shrink: 0;
+    border-bottom: none;
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 8px 6px;
+    text-align: center;
+  }
+  .gp-sb-season.gp-sb-active {
+    border-left: none;
+    border-bottom: 2px solid var(--c-yellow, #f5c400);
+  }
+  .gp-sb-season-lbl {
+    font-size: 8px;
+    letter-spacing: 1.5px;
+  }
+  .gp-sb-season-icon {
+    font-size: 14px;
+  }
+
+  .gp-sb-divider {
+    width: 1px;
+    height: auto;
+    background: rgba(255, 255, 255, 0.06);
+    margin: 0;
+    flex-shrink: 0;
+  }
+
+  /* Entrée GP horizontale */
+  .gp-sb-entry {
+    flex-direction: column;
+    align-items: flex-start;
+    width: 110px;
+    min-width: 110px;
+    flex-shrink: 0;
+    border-bottom: 2px solid transparent;
+    border-left: none;
+    padding: 8px 8px 6px;
+  }
+  .gp-sb-entry.gp-sb-active {
+    background: rgba(232, 0, 45, 0.07);
+    border-left: none;
+    border-bottom-color: var(--accent, #e8002d);
+  }
+  .gp-sb-name {
+    font-size: 11px;
+    max-width: 96px;
+  }
+  .gp-sb-date {
+    font-size: 8px;
+  }
+  .gp-sb-cats {
+    margin-top: 1px;
+  }
+  .gp-sb-cat {
+    font-size: 7px;
+    padding: 1px 3px;
+  }
+
+  .gp-sb-empty {
+    padding: 10px;
+    font-size: 10px;
+    min-width: 100px;
+  }
+
+  /* Topbar compact */
+  .gp-topbar {
+    padding: 8px 10px;
+  }
+  .gp-topbar-title {
+    font-size: 11px;
+    letter-spacing: 2px;
+  }
+  .gp-topbar-icon {
+    font-size: 14px;
+  }
+
+  /* Hdr btn GP compact */
+  .gp-hdr-btn {
+    padding: 2px 5px;
+    font-size: 9px;
+    margin-right: 2px;
+    gap: 2px;
+    letter-spacing: 1px;
+  }
+  .gp-hdr-icon {
+    font-size: 9px;
+  }
+  .gp-hdr-lbl {
+    font-size: 8px;
+    letter-spacing: 1px;
+  }
+  .gp-hdr-dot {
+    width: 4px;
+    height: 4px;
+  }
+
+  /* Cat bar */
+  .gp-cat-btn {
+    font-size: 10px;
+    padding: 8px 10px 7px;
+    letter-spacing: 1px;
+  }
+
+  /* Body */
+  .gp-body {
+    padding: 10px 8px 32px;
+  }
+  .gp-gp-name {
+    font-size: 14px;
+    letter-spacing: 1px;
+  }
+  .gp-gp-header {
+    margin-bottom: 10px;
+  }
+
+  /* Race header */
+  .gp-race-header {
+    gap: 5px;
+    margin-bottom: 8px;
+  }
+  .gp-race-label {
+    font-size: 12px;
+    letter-spacing: 1.5px;
+  }
+
+  /* Table mobile */
+  .gp-table {
+    font-size: 12px;
+    width: auto;
+    min-width: 100%;
+  }
+  .gp-table th {
+    font-size: 8px;
+    padding: 4px 5px 5px;
+    white-space: nowrap;
+  }
+  .gp-table td {
+    padding: 5px 5px;
+    white-space: nowrap;
+  }
+
+  /* Bike cachée */
+  .gp-th-bike {
+    display: none !important;
+  }
+  .gp-td-bike {
+    display: none !important;
+  }
+
+  /* Nr dossard caché */
+  .gp-nr {
+    display: none;
+  }
+
+  /* Tailles colonnes */
+  .gp-td-pos {
+    width: 26px;
+    font-size: 13px;
+    padding-right: 2px;
+  }
+  .gp-pos-1 .gp-td-pos {
+    font-size: 14px;
+  }
+  .gp-fn {
+    font-size: 10px;
+  }
+  .gp-ln {
+    font-size: 12px;
+    letter-spacing: 0;
+  }
+  .gp-td-name {
+    min-width: 90px;
+  }
+  .gp-pts {
+    font-size: 13px;
+  }
+  .gp-pts-qr {
+    font-size: 11px;
+  }
+  .gp-racepos {
+    font-size: 9px;
+  }
+  .gp-td-total {
+    font-size: 14px;
+  }
+  .gp-td-total-all {
+    font-size: 13px;
+  }
+  .gp-td-diff {
+    font-size: 11px;
+  }
+
+  /* Season table : petite */
+  .gp-season-title {
+    font-size: 14px;
+  }
+  .gp-sea-total {
+    font-size: 13px;
+  }
+  .gp-sea-detail {
+    font-size: 8px;
+  }
+  .gp-col-gp {
+    min-width: 56px;
+  }
+
+  /* Podium rows */
+  .gp-pos-1 td,
+  .gp-pos-2 td,
+  .gp-pos-3 td {
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+
+  /* Toast / notif */
+  .gp-toast {
+    font-size: 11px;
+    padding: 7px 14px;
+    bottom: 14px;
+  }
+  .gp-notif {
+    font-size: 12px;
+    padding: 7px 14px;
+    bottom: 52px;
+    white-space: normal;
+    text-align: center;
+    max-width: calc(100vw - 24px);
+  }
+  .gp-sync-indicator {
+    font-size: 9px;
+  }
+}
+
+/* ── Pénalités saison ──────────────────────────────── */
+.gp-pen-btn {
+  margin-left: auto;
+  color: rgba(255, 255, 255, 0.3) !important;
+}
+.gp-pen-btn.gp-cat-active {
+  color: var(--c-yellow, #f5c400) !important;
+}
+
+.gp-col-pen {
+  text-align: center !important;
+  min-width: 52px;
+}
+.gp-td-pen {
+  text-align: center;
+}
+.gp-pen-val {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--c-red, #ff4040);
+  letter-spacing: 0.3px;
+}
+.gp-td-brut {
+  font-size: 14px !important;
+  color: rgba(255, 255, 255, 0.35) !important;
+}
+
+.gp-pen-input {
+  width: 52px;
+  background: rgba(255, 64, 64, 0.1);
+  border: 1px solid rgba(255, 64, 64, 0.35);
+  border-radius: 3px;
+  color: var(--c-red, #ff4040);
+  font-family: var(--fd, "Barlow Condensed", sans-serif);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  padding: 2px 4px;
+  outline: none;
+}
+.gp-pen-input:focus {
+  border-color: rgba(255, 64, 64, 0.7);
+}
+
+@media (max-width: 600px) {
+  .gp-pen-input {
+    width: 42px;
+    font-size: 11px;
+  }
+  .gp-pen-val {
+    font-size: 11px;
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   ── FIM MOTOCROSS OF NATIONS — classement par nation ──
+   Réutilise .gp-stats-table (stats.css) pour la structure
+   du tableau ; règles ci-dessous = spécifique nations.
+══════════════════════════════════════════════════════ */
+.gp-mxon-note {
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.35);
+  margin: 0 0 10px;
+  line-height: 1.4;
+}
+
+.gp-mxon-table th,
+.gp-mxon-table td {
+  text-align: center;
+}
+.gp-mxon-table th:nth-child(2),
+.gp-mxon-table td:nth-child(2) {
+  text-align: left;
+}
+
+.gp-mxon-nation {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.gp-nat-flag {
+  border-radius: 2px;
+  display: block;
+}
+.gp-nat-code {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+}
+.gp-mxon-count {
+  font-size: 9px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.25);
+  margin-left: 2px;
+}
+
+.gp-mxon-cell {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+.gp-mxon-res {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: help;
+}
+.gp-mxon-res.gp-mxon-drop {
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.25);
+  text-decoration: line-through;
+}
+.gp-mxon-empty {
+  color: rgba(255, 255, 255, 0.15);
+}
+
+.gp-td-nat {
+  text-align: center;
+}
+
+@media (max-width: 600px) {
+  .gp-mxon-note {
+    font-size: 9px;
+  }
+  .gp-mxon-nation {
+    gap: 4px;
+  }
+  .gp-nat-code {
+    font-size: 10px;
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   ── STATS MODULE → stats.css ──────────────────────────
+   Pour désactiver les stats : retirer stats.css (et
+   stats.js) de index.html. Aucune modification ici.
+══════════════════════════════════════════════════════ */

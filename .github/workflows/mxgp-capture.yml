@@ -1,0 +1,53 @@
+name: MXGP Live Capture
+
+# ────────────────────────────────────────────────────────────
+# Déclenchement automatique — samedi & dimanche uniquement.
+# GitHub Actions limite un job à 6h d'affilée → on chaîne 4
+# créneaux par jour (~5h50 de capture chacun, léger recouvrement)
+# pour couvrir toute la plage horaire possible d'un GP MXGP quel
+# que soit le fuseau du circuit (Australie tôt le matin heure FR
+# → Argentine tard le soir heure FR).
+#
+# Horaires calés sur l'heure d'été française (CEST, UTC+2), qui
+# couvre la majorité de la saison MXGP. En période d'heure d'hiver
+# (CET, UTC+1, début de saison), chaque créneau démarre ~1h plus
+# tôt en heure locale française — la marge déjà prévue absorbe ce
+# décalage.
+# ────────────────────────────────────────────────────────────
+on:
+  schedule:
+    - cron: "0 22 * * 5" # Ven 22h UTC = Sam 00h00 CEST
+    - cron: "0 4 * * 6" # Sam 04h UTC = Sam 06h00 CEST
+    - cron: "0 10 * * 6" # Sam 10h UTC = Sam 12h00 CEST
+    - cron: "0 16 * * 6" # Sam 16h UTC = Sam 18h00 CEST
+    - cron: "0 22 * * 6" # Sam 22h UTC = Dim 00h00 CEST
+    - cron: "0 4 * * 0" # Dim 04h UTC = Dim 06h00 CEST
+    - cron: "0 10 * * 0" # Dim 10h UTC = Dim 12h00 CEST
+    - cron: "0 16 * * 0" # Dim 16h UTC = Dim 18h00 CEST
+  workflow_dispatch: {} # permet aussi un lancement manuel depuis GitHub
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 358 # filet de sécurité — le script s'arrête déjà seul à 5h50
+
+    steps:
+      - name: Checkout du site
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: capture/package-lock.json
+
+      - name: Installation des dépendances
+        working-directory: capture
+        run: npm install
+
+      - name: Lancer la capture
+        working-directory: capture
+        env:
+          FIREBASE_DB_SECRET: ${{ secrets.FIREBASE_DB_SECRET }}
+        run: node capture.js
