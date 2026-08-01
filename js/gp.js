@@ -24,17 +24,17 @@ const GP = (() => {
      COULEURS PAR CATÉGORIE
   ───────────────────────────────────────────────────────── */
   const CAT_COLORS = {
-    MXGP: "#e8002d", // Rouge — Championnat du monde 450
-    MX2: "#0057b8", // Bleu — Championnat du monde 250
-    WMX: "#9c27b0", // Violet — Championnat du monde féminin
-    EMX250: "#00a651", // Vert — Championnat d'Europe 250
-    EMX125: "#ff8800", // Orange — Championnat d'Europe 125
-    EMXOPEN: "#757575", // Gris — Open
-    MXON: "#f5c400", // Jaune/or — FIM Motocross of Nations
-    EMX85: "#00bcd4", // Cyan — Championnat d'Europe 85
-    EMX65: "#e91e63", // Rose/magenta — Championnat d'Europe 65
-    EMX2T: "#5d4037", // Marron foncé — Championnat d'Europe 2T
-    EMXOPEN: "#9e9e9e", // Gris clair — Championnat d'Europe Open
+    MXGP: "#FF0033", // Rouge — Championnat du monde 450
+    MX2: "#0047AB", // Bleu — Championnat du monde 250
+    WMX: "#009B77", // Violet — Championnat du monde féminin
+    EMX250: "#FFBF00", // Vert — Championnat d'Europe 250
+    EMX125: "#FF7F00", // Orange — Championnat d'Europe 125
+    EMXOPEN: "#6A0DAD", // Gris — Open
+    MXON: "#FF007F", // Jaune/or — FIM Motocross of Nations
+    EMX85: "#5C4033", // Cyan — Championnat d'Europe 85
+    EMX65: "#708238", // Rose/magenta — Championnat d'Europe 65
+    EMX2T: "#FF7F50", // Marron foncé — Championnat d'Europe 2T
+    EMXOPEN: "#4A0E4E", // Gris clair — Championnat d'Europe Open
   };
 
   function _catColor(cat) {
