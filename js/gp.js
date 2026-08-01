@@ -26,10 +26,10 @@ const GP = (() => {
   const CAT_COLORS = {
     MXGP: "#FF0033", // Rouge — Championnat du monde 450
     MX2: "#0047AB", // Bleu — Championnat du monde 250
-    WMX: "#009B77", // Violet — Championnat du monde féminin
+    WMX: "#6A0DAD", // Violet — Championnat du monde féminin
     EMX250: "#FFBF00", // Vert — Championnat d'Europe 250
     EMX125: "#FF7F00", // Orange — Championnat d'Europe 125
-    EMXOPEN: "#6A0DAD", // Gris — Open
+    EMXOPEN: "#009B77", // Gris — Open
     MXON: "#FF007F", // Jaune/or — FIM Motocross of Nations
     EMX85: "#5C4033", // Cyan — Championnat d'Europe 85
     EMX65: "#708238", // Rose/magenta — Championnat d'Europe 65
