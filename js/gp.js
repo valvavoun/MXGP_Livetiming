@@ -24,17 +24,17 @@ const GP = (() => {
      COULEURS PAR CATÉGORIE
   ───────────────────────────────────────────────────────── */
   const CAT_COLORS = {
-    MXGP: "#FF0033", // Rouge — Championnat du monde 450
-    MX2: "#0047AB", // Bleu — Championnat du monde 250
-    WMX: "#6A0DAD", // Violet — Championnat du monde féminin
-    EMX250: "#FFBF00", // Vert — Championnat d'Europe 250
-    EMX125: "#FF7F00", // Orange — Championnat d'Europe 125
-    EMXOPEN: "#009B77", // Gris — Open
-    MXON: "#FF007F", // Jaune/or — FIM Motocross of Nations
-    EMX85: "#5C4033", // Cyan — Championnat d'Europe 85
-    EMX65: "#708238", // Rose/magenta — Championnat d'Europe 65
-    EMX2T: "#FF7F50", // Marron foncé — Championnat d'Europe 2T
-    EMXOPEN: "#4A0E4E", // Gris clair — Championnat d'Europe Open
+    MXGP: "#e8002d", // Rouge — Championnat du monde 450
+    MX2: "#0057b8", // Bleu — Championnat du monde 250
+    WMX: "#9c27b0", // Violet — Championnat du monde féminin
+    EMX250: "#00a651", // Vert — Championnat d'Europe 250
+    EMX125: "#ff8800", // Orange — Championnat d'Europe 125
+    EMXOPEN: "#757575", // Gris — Open
+    MXON: "#f5c400", // Jaune/or — FIM Motocross of Nations
+    EMX85: "#00bcd4", // Cyan — Championnat d'Europe 85
+    EMX65: "#e91e63", // Rose/magenta — Championnat d'Europe 65
+    EMX2T: "#5d4037", // Marron foncé — Championnat d'Europe 2T
+    EMXOPEN: "#9e9e9e", // Gris clair — Championnat d'Europe Open
   };
 
   function _catColor(cat) {
@@ -50,7 +50,25 @@ const GP = (() => {
     25, 22, 20, 18, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1,
   ];
   const PTS_QR = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
-  const LIVE_THROTTLE_MS = 15_000;
+  const LIVE_THROTTLE_MS = 15_000; // conservé pour _startLiveLoop (panel ouvert) — voir plus bas
+
+  /* ── Écriture live ÉVÉNEMENTIELLE ────────────────────────────
+     Au lieu d'un timer fixe, on écrit uniquement quand le classement
+     PARMI LES POSITIONS QUI RAPPORTENT DES POINTS change réellement —
+     un pilote qui gagne/perd des places hors de la zone à points ne
+     déclenche aucune écriture inutile.
+     LIVE_DEBOUNCE_MS  : regroupe les changements quasi simultanés
+                          (ex. plusieurs pilotes qui se doublent au
+                          même passage ligne) en une seule écriture.
+     LIVE_HEARTBEAT_MS : filet de sécurité — force une ré-écriture
+                          même sans changement de classement, pour que
+                          le timestamp affiché reste "frais" durant une
+                          phase calme de la course. ──────────────── */
+  const LIVE_DEBOUNCE_MS = 1_200;
+  const LIVE_HEARTBEAT_MS = 30_000;
+  let _liveLastSig = null; // signature du dernier classement à points écrit
+  let _liveLastWriteTs = 0; // timestamp de la dernière écriture réussie
+  let _liveDebounceTmr = null; // regroupement des changements rapprochés
   const RACE_LABEL = {
     QR: "Qual. Race",
     R1: "Race 1",
@@ -558,6 +576,32 @@ const GP = (() => {
     // Les re-render depuis SignalR (~1/s) réinitialisaient le scroll en continu.
     if (isOpen && activeWeek !== "stats" && activeWeek !== "season")
       _renderBody();
+
+    /* Écriture live événementielle.
+       Navigateur normal : uniquement si le panel GP Standings est ouvert
+       (comportement d'origine — pas la peine d'écrire si personne ne
+       regarde l'onglet).
+       Script headless (capture.js définit window.__MXGP_HEADLESS__ avant
+       de charger gp.js) : TOUJOURS, puisque son unique rôle est
+       justement d'alimenter Firebase sans qu'aucun onglet ne soit ouvert
+       nulle part. */
+    if (isOpen || window.__MXGP_HEADLESS__) _scheduleLiveWrite();
+  }
+
+  function _liveSignature(cat, sessKey, riders) {
+    /* Ne garde que les pilotes qui rapportent réellement des points,
+       dans l'ordre du classement — un changement de cette séquence
+       veut dire que le classement à points a réellement bougé. */
+    const scored = riders.filter((r) => r.pts > 0).map((r) => r.nr);
+    return `${cat}|${sessKey}|${scored.join(",")}`;
+  }
+
+  function _scheduleLiveWrite() {
+    if (_liveDebounceTmr) return; // écriture déjà programmée, on laisse faire
+    _liveDebounceTmr = setTimeout(() => {
+      _liveDebounceTmr = null;
+      _writeLive();
+    }, LIVE_DEBOUNCE_MS);
   }
 
   function autoCapture(riders, meta) {
@@ -648,6 +692,14 @@ const GP = (() => {
       () => {},
     );
     if (allGPs[wk]) allGPs[wk].live = null;
+
+    // Reset détection de changement — repart propre pour la prochaine session
+    _liveLastSig = null;
+    _liveLastWriteTs = 0;
+    if (_liveDebounceTmr) {
+      clearTimeout(_liveDebounceTmr);
+      _liveDebounceTmr = null;
+    }
 
     activeWeek = wk;
     activeCat = cat;
@@ -1899,10 +1951,22 @@ const GP = (() => {
 
     if (!riders.length) return;
 
+    /* N'écrire que si le classement à points a changé, ou si le
+       heartbeat de sécurité (30s) est dépassé — évite toute écriture
+       Firebase inutile quand seules des positions hors des points
+       bougent (aucun impact sur le classement affiché). */
+    const sig = _liveSignature(cat, sessKey, riders);
+    const now = Date.now();
+    const stale = now - _liveLastWriteTs > LIVE_HEARTBEAT_MS;
+    if (sig === _liveLastSig && !stale) return;
+
+    _liveLastSig = sig;
+    _liveLastWriteTs = now;
+
     fetch(`${FB_BASE}/gp/${wk}/live.json`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ cat, sessKey, ts: Date.now(), riders }),
+      body: JSON.stringify({ cat, sessKey, ts: now, riders }),
     }).catch(() => {});
   }
 

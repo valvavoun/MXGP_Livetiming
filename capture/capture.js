@@ -100,21 +100,62 @@ window.localStorage = {
 // fetch : Node ≥18 fournit fetch nativement. On enrobe l'appel pour
 // injecter automatiquement ?auth=<SECRET> UNIQUEMENT sur les écritures
 // (PUT/POST/PATCH/DELETE) vers la Realtime Database Firebase — sans
-// jamais modifier une seule ligne de gp.js/main.js.
+// jamais modifier une seule ligne de gp.js/main.js — ET pour LOGUER
+// explicitement chaque tentative (succès ou échec), afin qu'aucune
+// écriture ne puisse échouer en silence.
 const realFetch = global.fetch;
-window.fetch = (input, opts = {}) => {
+
+function _shortUrl(u) {
+  // Masque le secret dans les logs, même si GitHub redacte déjà les
+  // secrets automatiquement — défense en profondeur.
+  return u
+    .replace(/([?&]auth=)[^&]+/, "$1***")
+    .replace(/^https:\/\/[^/]+/, "");
+}
+
+window.fetch = async (input, opts = {}) => {
   let url = typeof input === "string" ? input : input?.url || "";
   const method = (opts.method || "GET").toUpperCase();
+  const isFirebaseCall = url.includes("firebasedatabase.app");
   const isFirebaseWrite =
-    url.includes("firebasedatabase.app") &&
-    ["PUT", "POST", "PATCH", "DELETE"].includes(method);
+    isFirebaseCall && ["PUT", "POST", "PATCH", "DELETE"].includes(method);
 
   if (isFirebaseWrite) {
     const sep = url.includes("?") ? "&" : "?";
     url = `${url}${sep}auth=${DB_SECRET}`;
     if (typeof input === "string") input = url;
   }
-  return realFetch(typeof input === "string" ? url : input, opts);
+
+  const t0 = Date.now();
+  let res;
+  try {
+    res = await realFetch(input, opts);
+  } catch (networkErr) {
+    if (isFirebaseCall) {
+      console.error(
+        `[FB] ❌ ${method} ${_shortUrl(url)} — ERREUR RÉSEAU : ${networkErr.message}`,
+      );
+    }
+    throw networkErr;
+  }
+
+  if (isFirebaseWrite) {
+    const ms = Date.now() - t0;
+    if (res.ok) {
+      console.log(`[FB] ✅ ${method} ${_shortUrl(url)} → ${res.status} (${ms}ms)`);
+    } else {
+      let body = "";
+      try {
+        body = await res.clone().text();
+      } catch {}
+      console.error(
+        `[FB] ❌ ${method} ${_shortUrl(url)} → ${res.status} ${res.statusText}` +
+          (body ? ` — ${body.slice(0, 300)}` : ""),
+      );
+    }
+  }
+
+  return res;
 };
 
 /* Rendre le contexte global de Node cohérent avec window, au cas où
@@ -129,6 +170,13 @@ global.EventSource = EventSource;
 /* Étouffer les warnings jsdom "not implemented" (scrollTo, etc.) —
    purement cosmétique, sans incidence fonctionnelle ici. */
 dom.virtualConsole.on("jsdomError", () => {});
+
+/* Signale à gp.js qu'on tourne en headless (script de capture, pas un
+   navigateur réel) — permet à _writeLive() d'écrire en continu ici,
+   alors qu'un vrai visiteur n'écrit que quand il a le panel GP
+   Standings ouvert (comportement d'origine, pas de spam inutile). */
+window.__MXGP_HEADLESS__ = true;
+global.__MXGP_HEADLESS__ = true;
 
 /* ── 3. Chargement des VRAIS fichiers du site, dans le même ordre
    que index.html (settings.js → gp.js → main.js).
