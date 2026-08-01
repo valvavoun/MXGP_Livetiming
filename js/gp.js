@@ -605,28 +605,42 @@ const GP = (() => {
   }
 
   function autoCapture(riders, meta) {
-    if (!meta) return;
+    /* Valeur de retour : true  = traité (sauvegardé, déjà existant, ou
+                                    cas volontairement ignoré) → ne pas
+                                    réessayer.
+                          false = pas encore assez de données (ex:
+                                    premier message reçu après connexion
+                                    en plein milieu d'un "Finished", sans
+                                    la liste des pilotes) → main.js DOIT
+                                    réessayer au prochain message plutôt
+                                    que de verrouiller sessionFinished. */
+    if (!meta) return false;
     const key = _inferSessionKey(meta);
-    if (!key) return;
+    if (!key) return false;
     const cat = _inferMetaCategory(meta);
-    if (!cat) return;
+    if (!cat) return false;
 
     /* FIM Motocross of Nations : la QR du samedi (3 courses séparées
        MXGP/MX2/Open) ne compte pas pour le classement des nations, et
        les 3 se disputeraient la même clé "QR" — on l'ignore entièrement. */
-    if (cat === MXON_CAT && key === "QR") return;
+    if (cat === MXON_CAT && key === "QR") return true;
 
     const wk = _weekKey();
     if (allGPs[wk]?.cats?.[cat]?.races?.[key]) {
       console.log(
         `[GP] Auto-save skipped — ${cat} ${RACE_LABEL[key]} déjà enregistrée`,
       );
-      return;
+      return true;
     }
 
     const riderList = riders?.length ? riders : latestRiders;
     const filtered = riderList.filter((r) => r.pos && r.pos > 0);
-    if (!filtered.length) return;
+    if (!filtered.length) {
+      console.log(
+        `[GP] Pas encore de données pilotes pour ${cat} ${RACE_LABEL[key] || key} — nouvelle tentative au prochain message`,
+      );
+      return false;
+    }
 
     /* ── RED FLAG GUARD ──────────────────────────────────────────────
        If the leader has fewer than MIN_LAPS, this is almost certainly
@@ -639,6 +653,12 @@ const GP = (() => {
                    → guard at 12 (safety margin for fast tracks)
          QR      : 20 min ÷ 150 s =  8 laps + 2 extra = 10 real minimum
                    → guard at 8  (safety margin)
+
+       Retourne false (pas true) : si la course reprend après le drapeau
+       rouge et se termine ensuite pour de vrai avec assez de tours, on
+       veut que la tentative automatique suivante puisse réussir toute
+       seule — utile surtout côté script headless, où personne n'est là
+       pour cliquer sur ⬇ Capture manuellement.
     ─────────────────────────────────────────────────────────────────── */
     const MIN_LAPS = key === "QR" ? 8 : 12;
     const maxLaps = Math.max(...filtered.map((r) => parseInt(r.laps) || 0), 0);
@@ -649,7 +669,7 @@ const GP = (() => {
       _showNotif(
         `🚩 Red flag? Only ${maxLaps} lap${maxLaps > 1 ? "s" : ""} — auto-save skipped. Use ⬇ Capture after restart.`,
       );
-      return;
+      return false;
     }
 
     const results = filtered
@@ -710,6 +730,7 @@ const GP = (() => {
     );
     _updateHeaderBtn();
     if (isOpen) _renderBody();
+    return true;
   }
 
   function setCurrent(cat, sess) {
