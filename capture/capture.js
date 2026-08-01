@@ -71,8 +71,22 @@ const { window } = dom;
 
 /* ── 2. Polyfills environnement navigateur manquants sous Node ── */
 
-// WebSocket (jsdom n'en fournit pas)
-window.WebSocket = WebSocket;
+// WebSocket (jsdom n'en fournit pas). On enrobe la classe `ws` pour
+// qu'elle envoie des en-têtes réalistes de navigateur (Origin,
+// User-Agent) lors du handshake — certains backends (dont potentiellement
+// liveresults.mxgp.com) se comportent différemment sans ces en-têtes.
+class BrowserLikeWebSocket extends WebSocket {
+  constructor(url, protocols) {
+    super(url, protocols, {
+      origin: "https://valvavoun.github.io",
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      },
+    });
+  }
+}
+window.WebSocket = BrowserLikeWebSocket;
 
 // EventSource RÉEL (pas un stub) : GP.init() lit tout l'arbre Firebase existant
 // via SSE au démarrage — indispensable pour que les protections "déjà
@@ -119,6 +133,7 @@ window.fetch = async (input, opts = {}) => {
   const isFirebaseCall = url.includes("firebasedatabase.app");
   const isFirebaseWrite =
     isFirebaseCall && ["PUT", "POST", "PATCH", "DELETE"].includes(method);
+  const isMxgpCall = url.includes("liveresults.mxgp.com");
 
   if (isFirebaseWrite) {
     const sep = url.includes("?") ? "&" : "?";
@@ -126,14 +141,33 @@ window.fetch = async (input, opts = {}) => {
     if (typeof input === "string") input = url;
   }
 
+  /* Les endpoints MXGP (negotiate + start) sont conçus pour être appelés
+     depuis un vrai navigateur. Node/fetch n'envoie par défaut ni
+     User-Agent "navigateur", ni Origin, ni Referer — certains backends
+     s'en servent pour valider/autoriser la requête (typiquement le
+     `/start` qui dit au serveur SignalR de commencer à pousser les
+     données). On les ajoute ici pour se rapprocher d'un vrai navigateur,
+     sans écraser un header déjà fourni explicitement par le code. */
+  if (isMxgpCall) {
+    opts = { ...opts };
+    opts.headers = {
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      Origin: "https://valvavoun.github.io",
+      Referer: "https://valvavoun.github.io/",
+      Accept: "*/*",
+      ...(opts.headers || {}),
+    };
+  }
+
   const t0 = Date.now();
   let res;
   try {
     res = await realFetch(input, opts);
   } catch (networkErr) {
-    if (isFirebaseCall) {
+    if (isFirebaseCall || isMxgpCall) {
       console.error(
-        `[FB] ❌ ${method} ${_shortUrl(url)} — ERREUR RÉSEAU : ${networkErr.message}`,
+        `[NET] ❌ ${method} ${_shortUrl(url)} — ERREUR RÉSEAU : ${networkErr.message}`,
       );
     }
     throw networkErr;
@@ -153,6 +187,11 @@ window.fetch = async (input, opts = {}) => {
           (body ? ` — ${body.slice(0, 300)}` : ""),
       );
     }
+  } else if (isMxgpCall) {
+    const ms = Date.now() - t0;
+    console.log(
+      `[MXGP-HTTP] ${res.ok ? "✅" : "❌"} ${method} ${_shortUrl(url)} → ${res.status} (${ms}ms)`,
+    );
   }
 
   return res;
@@ -164,7 +203,7 @@ window.fetch = async (input, opts = {}) => {
 global.window = window;
 global.document = window.document;
 global.navigator = window.navigator;
-global.WebSocket = WebSocket;
+global.WebSocket = BrowserLikeWebSocket;
 global.EventSource = EventSource;
 
 /* Étouffer les warnings jsdom "not implemented" (scrollTo, etc.) —
