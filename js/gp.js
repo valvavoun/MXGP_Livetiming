@@ -102,6 +102,32 @@ const GP = (() => {
      Activation : URL avec ?mxontest=1, ou dans la console : GP.testMxon(true) */
   let _forceMxon = false;
 
+  /* ── Mode test MXoN : mapping catégorie réelle → créneau R1/R2/R3 ──
+     Sur un GP normal, plusieurs vraies catégories (MX2, MXGP, EMX...)
+     ont chacune leur propre "Race 1"/"Race 2" — sans ce mapping, elles
+     s'écraseraient toutes sous la même clé une fois forcées en MXON
+     (la clé de session normale ignore la catégorie). On assigne un
+     créneau unique par catégorie réelle rencontrée, dans l'ordre
+     d'arrivée, jusqu'à 3 — exactement comme les 3 vraies manches du
+     MXoN. Permet de tester TOUT le pipeline (agrégation, retrait du
+     pire résultat, classement par nation) sur un GP classique, avant
+     le vrai jour. Ne s'applique QUE si _forceMxon est actif
+     manuellement — jamais le jour réel (où le flux enverra
+     directement de vraies clés R1/R2/R3, sans ambiguïté). */
+  let _mxonTestSlots = {}; // catégorie réelle → "R1" | "R2" | "R3"
+  const _mxonTestSlotOrder = ["R1", "R2", "R3"];
+
+  function _mxonTestSlotFor(realCat) {
+    if (!realCat) return null;
+    if (_mxonTestSlots[realCat]) return _mxonTestSlots[realCat];
+    const used = Object.values(_mxonTestSlots);
+    const next = _mxonTestSlotOrder.find((s) => !used.includes(s));
+    if (!next) return null; // déjà 3 catégories réelles différentes vues
+    _mxonTestSlots[realCat] = next;
+    console.log(`[GP] MXoN TEST — "${realCat}" assigné au créneau ${next}`);
+    return next;
+  }
+
   function _isMxonWeekByDate() {
     const wk = _weekKey();
     return _forceMxon || (wk >= MXON_WK_START && wk <= MXON_WK_END);
@@ -243,6 +269,11 @@ const GP = (() => {
 
   function _inferSessionKey(meta) {
     if (!meta) return null;
+    if (_forceMxon) {
+      const realCat = String(meta.category || "").trim();
+      const slot = _mxonTestSlotFor(realCat);
+      if (slot) return slot;
+    }
     const rawSess = String(meta.sessType || "").trim();
     const fromSess = _normalizeSessionType(rawSess);
     if (fromSess) return fromSess;
@@ -542,6 +573,7 @@ const GP = (() => {
    *  GP.testMxon(true) puis rouvrir/rafraîchir le panneau GP. */
   function testMxon(on) {
     _forceMxon = !!on;
+    _mxonTestSlots = {}; // repart propre à chaque activation/désactivation
     console.log(`[GP] MXoN test mode: ${_forceMxon ? "ON" : "OFF"}`);
     if (isOpen) _renderBody();
   }
@@ -1085,8 +1117,13 @@ const GP = (() => {
   ───────────────────────────────────────────────────────── */
   function _withScrollPreservation(fn) {
     const body = document.getElementById("gp-body");
-    // Lire avant fn() — l'élément est encore dans le DOM
-    const savedLeft = body?.querySelector(".gp-table-wrap")?.scrollLeft ?? 0;
+    // Lire avant fn() — l'élément est encore dans le DOM.
+    // IMPORTANT : querySelectorAll (pas querySelector) — une vue peut
+    // afficher plusieurs tables scrollables en même temps (plusieurs
+    // manches listées) ; avant, seule la toute première conservait son
+    // scroll horizontal, les suivantes sautaient à chaque actualisation.
+    const wraps = body ? [...body.querySelectorAll(".gp-table-wrap")] : [];
+    const savedLefts = wraps.map((w) => w.scrollLeft);
     const savedTop = body?.scrollTop ?? 0;
 
     fn();
@@ -1094,13 +1131,18 @@ const GP = (() => {
     // body n'est pas remplacé par innerHTML → scrollTop direct OK
     if (body) body.scrollTop = savedTop;
 
-    // .gp-table-wrap peut avoir été recréé — requête fraîche dans double RAF
-    // (1er RAF = après mutation DOM, 2ème = après premier paint)
+    // Les .gp-table-wrap peuvent avoir été recréés — requête fraîche
+    // dans double RAF (1er RAF = après mutation DOM, 2ème = après
+    // premier paint). On réapplique par position (même ordre de rendu
+    // attendu entre deux passes tant que la liste de manches ne change
+    // pas), à TOUTES les tables, pas juste la première.
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         if (body) body.scrollTop = savedTop;
-        const newTw = body?.querySelector(".gp-table-wrap");
-        if (newTw && savedLeft > 0) newTw.scrollLeft = savedLeft;
+        const newWraps = body ? [...body.querySelectorAll(".gp-table-wrap")] : [];
+        newWraps.forEach((w, i) => {
+          if (savedLefts[i] > 0) w.scrollLeft = savedLefts[i];
+        });
       });
     });
   }

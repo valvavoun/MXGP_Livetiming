@@ -175,8 +175,16 @@ window.fetch = async (input, opts = {}) => {
 
   if (isFirebaseWrite) {
     const ms = Date.now() - t0;
+    /* live.json s'écrit très souvent (à chaque changement de classement,
+       toutes les quelques secondes en course) — logguer chaque succès
+       spammerait les logs pour rien. On garde en revanche TOUJOURS ses
+       échecs (utiles à déboguer), et TOUJOURS tout le reste (résultats
+       finaux, DELETE...), succès comme échecs. */
+    const isLiveWrite = url.includes("/live.json");
     if (res.ok) {
-      console.log(`[FB] ✅ ${method} ${_shortUrl(url)} → ${res.status} (${ms}ms)`);
+      if (!isLiveWrite) {
+        console.log(`[FB] ✅ ${method} ${_shortUrl(url)} → ${res.status} (${ms}ms)`);
+      }
     } else {
       let body = "";
       try {

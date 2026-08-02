@@ -20,8 +20,11 @@ const Stats = (() => {
      SCROLL PRESERVATION
   ───────────────────────────────────────────────────────── */
   function _withScrollPreservation(fn) {
-    // Lire avant fn() — l'élément est encore dans le DOM
-    const savedLeft = _body?.querySelector(".gp-table-wrap")?.scrollLeft ?? 0;
+    // Lire avant fn() — l'élément est encore dans le DOM.
+    // querySelectorAll (pas querySelector) — couvre toutes les tables
+    // scrollables affichées, pas uniquement la première.
+    const wraps = _body ? [..._body.querySelectorAll(".gp-table-wrap")] : [];
+    const savedLefts = wraps.map((w) => w.scrollLeft);
     const savedTop  = _body?.scrollTop ?? 0;
 
     fn();
@@ -33,8 +36,10 @@ const Stats = (() => {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         if (_body) _body.scrollTop = savedTop;
-        const newTw = _body?.querySelector(".gp-table-wrap");
-        if (newTw && savedLeft > 0) newTw.scrollLeft = savedLeft;
+        const newWraps = _body ? [..._body.querySelectorAll(".gp-table-wrap")] : [];
+        newWraps.forEach((w, i) => {
+          if (savedLefts[i] > 0) w.scrollLeft = savedLefts[i];
+        });
       });
     });
   }
