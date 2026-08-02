@@ -1,30 +1,14 @@
 name: MXGP Live Capture
 
 # ────────────────────────────────────────────────────────────
-# Déclenchement automatique — samedi & dimanche uniquement.
-# GitHub Actions limite un job à 6h d'affilée → on chaîne 4
-# créneaux par jour (~5h50 de capture chacun, léger recouvrement)
-# pour couvrir toute la plage horaire possible d'un GP MXGP quel
-# que soit le fuseau du circuit (Australie tôt le matin heure FR
-# → Argentine tard le soir heure FR).
-#
-# Horaires calés sur l'heure d'été française (CEST, UTC+2), qui
-# couvre la majorité de la saison MXGP. En période d'heure d'hiver
-# (CET, UTC+1, début de saison), chaque créneau démarre ~1h plus
-# tôt en heure locale française — la marge déjà prévue absorbe ce
-# décalage.
+# Déclenchement : UNIQUEMENT via workflow_dispatch (cron-job.org
+# appelle l'API GitHub à heure fixe pour lancer ce workflow).
+# Le déclenchement "schedule" interne de GitHub a été retiré
+# volontairement — le garder en plus de cron-job.org provoquait des
+# doubles lancements simultanés (un par schedule, un par cron-job.org).
 # ────────────────────────────────────────────────────────────
 on:
-  schedule:
-    - cron: "0 22 * * 5" # Ven 22h UTC = Sam 00h00 CEST
-    - cron: "0 4 * * 6" # Sam 04h UTC = Sam 06h00 CEST
-    - cron: "0 10 * * 6" # Sam 10h UTC = Sam 12h00 CEST
-    - cron: "0 16 * * 6" # Sam 16h UTC = Sam 18h00 CEST
-    - cron: "0 22 * * 6" # Sam 22h UTC = Dim 00h00 CEST
-    - cron: "0 4 * * 0" # Dim 04h UTC = Dim 06h00 CEST
-    - cron: "0 10 * * 0" # Dim 10h UTC = Dim 12h00 CEST
-    - cron: "0 16 * * 0" # Dim 16h UTC = Dim 18h00 CEST
-  workflow_dispatch: {} # permet aussi un lancement manuel depuis GitHub
+  workflow_dispatch: {} # déclenché par cron-job.org (et testable manuellement)
 
 jobs:
   capture:

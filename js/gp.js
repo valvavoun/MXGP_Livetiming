@@ -375,6 +375,12 @@ const GP = (() => {
     gpFlag,
     force = false,
   ) {
+    /* Seul le script headless (capture.js) écrit désormais en base —
+       les corrections manuelles se font directement dans la console
+       Firebase. On sort silencieusement, sans tenter le fetch, pour
+       ne jamais générer d'erreur 401 ni de bruit dans la console du
+       navigateur. */
+    if (!window.__MXGP_HEADLESS__) return;
     const wk = _weekKey();
     const base = `${FB_BASE}/gp/${wk}/cats/${cat}`;
     const raceUrl = `${base}/races/${raceKey}.json`;
@@ -585,7 +591,7 @@ const GP = (() => {
        de charger gp.js) : TOUJOURS, puisque son unique rôle est
        justement d'alimenter Firebase sans qu'aucun onglet ne soit ouvert
        nulle part. */
-    if (isOpen || window.__MXGP_HEADLESS__) _scheduleLiveWrite();
+    if (window.__MXGP_HEADLESS__) _scheduleLiveWrite();
   }
 
   function _liveSignature(cat, sessKey, riders) {
@@ -605,6 +611,12 @@ const GP = (() => {
   }
 
   function autoCapture(riders, meta) {
+    /* Seul le script headless écrit désormais. Un navigateur classique
+       ne doit plus rien tenter du tout (ni écriture, ni notification
+       "AUTO-SAVE" trompeuse puisque rien n'est réellement sauvegardé).
+       On retourne true ("traité") pour que main.js ne reboucle pas
+       indéfiniment dessus. */
+    if (!window.__MXGP_HEADLESS__) return true;
     /* Valeur de retour : true  = traité (sauvegardé, déjà existant, ou
                                     cas volontairement ignoré) → ne pas
                                     réessayer.
@@ -1814,6 +1826,10 @@ const GP = (() => {
 
   /** Écrit une pénalité dans Firebase et dans allGPs local */
   function _setPenalty(year, cat, nr, pts) {
+    /* Les pénalités s'éditent désormais directement dans la console
+       Firebase — plus d'écriture (ni de mutation locale trompeuse)
+       depuis le navigateur. */
+    if (!window.__MXGP_HEADLESS__) return;
     pts = Math.max(0, parseInt(pts) || 0);
     if (!allGPs._penalties) allGPs._penalties = {};
     if (!allGPs._penalties[year]) allGPs._penalties[year] = {};
@@ -1949,6 +1965,10 @@ const GP = (() => {
      LIVE WRITE (semaine courante uniquement)
   ───────────────────────────────────────────────────────── */
   function _writeLive() {
+    /* Défense en profondeur : _startLiveLoop() (déclenché par
+       l'ouverture du panel GP côté navigateur) appelle aussi cette
+       fonction directement. Seul le script headless doit écrire. */
+    if (!window.__MXGP_HEADLESS__) return;
     if (!latestMeta) return;
     const sessKey = _inferSessionKey(latestMeta);
     if (!sessKey) return;
