@@ -224,6 +224,14 @@ const GP = (() => {
     return candidates[candidates.length - 1]; // = today (i=0 est ajouté en dernier)
   }
 
+  /* Chemin Firebase d'une semaine, avec le niveau "année" ajouté en
+     plus (ex: /gp/2026/2026-08-01) — la clé de semaine elle-même ne
+     change pas, on ajoute juste un niveau de regroupement au-dessus.
+     Centralisé ici pour n'avoir qu'un seul endroit à maintenir. */
+  function _wkBase(wk) {
+    return `${FB_BASE}/gp/${wk.slice(0, 4)}/${wk}`;
+  }
+
   /* ─────────────────────────────────────────────────────────
      NORMALISATION SESSION / CATÉGORIE
   ───────────────────────────────────────────────────────── */
@@ -237,7 +245,64 @@ const GP = (() => {
     if (s.match(/race1/)) return "R1";
     if (s.match(/race2/)) return "R2";
     if (s.match(/race3/)) return "R3";
+    /* Libellés alternatifs parfois utilisés (motos, manches numérotées
+       autrement) — sécurité supplémentaire, notamment pour le MXoN dont
+       on ne connaît pas le libellé exact à l'avance. */
+    if (s.match(/\bmoto\s*1\b|\bheat\s*1\b|\b1(st|ère|er)?\s*(moto|heat|leg)\b/))
+      return "R1";
+    if (s.match(/\bmoto\s*2\b|\bheat\s*2\b|\b2(nd|ème)?\s*(moto|heat|leg)\b/))
+      return "R2";
+    if (s.match(/\bmoto\s*3\b|\bheat\s*3\b|\b3(rd|ème)?\s*(moto|heat|leg)\b/))
+      return "R3";
     return null;
+  }
+
+  /* ── Détection MXoN RÉELLE — jour + ordre chronologique ──────────
+     On connaît avec certitude, pour ce week-end précis (voir
+     MXON_WK_START/END) :
+       • MXoN est la SEULE catégorie active (pas d'EMX250/WMX/etc. ce
+         week-end-là)
+       • Samedi = qualification (1 seule session notée)
+       • Dimanche = 3 courses (R1/R2/R3), dans l'ordre chronologique
+     On se base donc sur le jour réel + l'ordre d'apparition — PAS sur
+     le texte envoyé par le flux, dont le libellé exact n'est pas
+     connu à l'avance (contrairement au reste de la saison, où le
+     texte est fiable). Free Practice / Warm-up sont explicitement
+     exclus : jamais notés, jamais assignés à un créneau. */
+  let _mxonRealSeq = {}; // libellé brut de session → clé déjà assignée
+  const _mxonRealOrder = ["R1", "R2", "R3"];
+
+  function _mxonRealSessionKey(meta) {
+    const label = `${meta.category || ""}|${meta.sessType || ""}|${meta.title || ""}|${meta.time || ""}`
+      .trim()
+      .toLowerCase();
+    if (/practice|warm[\s-]?up/.test(label)) return null; // jamais noté
+    /* Catégories support (jeunes / finales de repêchage) présentes le
+       même week-end sur le programme officiel, mais hors compétition
+       principale par nations — ne doivent jamais consommer un créneau
+       R1/R2/R3. Noms de branding stables (contrairement au libellé
+       exact des manches principales, qui lui peut varier). */
+    if (/blu\s*cru|\bb[\s-]?final\b|\bc[\s-]?final\b/.test(label)) return null;
+
+    if (_mxonRealSeq[label]) return _mxonRealSeq[label]; // déjà assignée
+
+    const isSaturday = new Date().getDay() === 6; // 0=dim … 6=sam
+    if (isSaturday) {
+      if (Object.values(_mxonRealSeq).includes("QR")) return null; // déjà pris
+      _mxonRealSeq[label] = "QR";
+      console.log("[GP] MXoN — qualification détectée (samedi) → QR");
+      return "QR";
+    }
+
+    // Dimanche : prochaine course dans l'ordre d'apparition
+    const used = new Set(Object.values(_mxonRealSeq));
+    const next = _mxonRealOrder.find((s) => !used.has(s));
+    if (!next) return null; // déjà les 3 courses assignées
+    _mxonRealSeq[label] = next;
+    console.log(
+      `[GP] MXoN — course détectée (ordre chronologique, dimanche) → ${next}`,
+    );
+    return next;
   }
 
   function _normalizeCat(cat) {
@@ -270,9 +335,14 @@ const GP = (() => {
   function _inferSessionKey(meta) {
     if (!meta) return null;
     if (_forceMxon) {
+      // Mode test manuel — mapping catégorie réelle → créneau (inchangé)
       const realCat = String(meta.category || "").trim();
       const slot = _mxonTestSlotFor(realCat);
       if (slot) return slot;
+    } else if (_isMxonWeekByDate()) {
+      // Semaine RÉELLE du MXoN — priorité absolue à cette détection,
+      // peu importe le texte du flux.
+      return _mxonRealSessionKey(meta);
     }
     const rawSess = String(meta.sessType || "").trim();
     const fromSess = _normalizeSessionType(rawSess);
@@ -370,9 +440,33 @@ const GP = (() => {
   function _applyFirebasePath(path, value) {
     if (!path || path === "/") {
       Object.keys(allGPs).forEach((k) => delete allGPs[k]);
-      if (value && typeof value === "object") Object.assign(allGPs, value);
+      if (value && typeof value === "object") {
+        /* Nouvelle structure : /gp/{année}/{semaine}/... — on aplatit
+           ici pour que allGPs[wk] continue de fonctionner PARTOUT
+           ailleurs dans le fichier, sans rien changer d'autre.
+           Rétrocompatible : une clé qui n'est pas une année à 4
+           chiffres (ex. d'anciennes entrées jamais migrées, encore à
+           la racine) est gardée telle quelle. */
+        Object.entries(value).forEach(([k, v]) => {
+          if (/^\d{4}$/.test(k) && v && typeof v === "object") {
+            Object.assign(allGPs, v); // conteneur d'année → aplati
+          } else {
+            allGPs[k] = v; // ancien format, déjà une clé de semaine
+          }
+        });
+      }
     } else {
-      const parts = path.replace(/^\//, "").split("/").filter(Boolean);
+      let parts = path.replace(/^\//, "").split("/").filter(Boolean);
+      // Retirer le segment "année" en tête (nouvelle structure) —
+      // reconnu par : 4 chiffres suivis d'une vraie clé de semaine
+      // YYYY-MM-DD juste après.
+      if (
+        parts.length >= 2 &&
+        /^\d{4}$/.test(parts[0]) &&
+        /^\d{4}-\d{2}-\d{2}$/.test(parts[1])
+      ) {
+        parts = parts.slice(1);
+      }
       let obj = allGPs;
       for (let i = 0; i < parts.length - 1; i++) {
         const p = parts[i];
@@ -413,7 +507,7 @@ const GP = (() => {
        navigateur. */
     if (!window.__MXGP_HEADLESS__) return;
     const wk = _weekKey();
-    const base = `${FB_BASE}/gp/${wk}/cats/${cat}`;
+    const base = `${_wkBase(wk)}/cats/${cat}`;
     const raceUrl = `${base}/races/${raceKey}.json`;
     try {
       /* Auto-capture: skip if already saved (protect against double-save).
@@ -440,7 +534,7 @@ const GP = (() => {
         });
       }
       if (gpFlag && !allGPs[wk]?.flag) {
-        await fetch(`${FB_BASE}/gp/${wk}/flag.json`, {
+        await fetch(`${_wkBase(wk)}/flag.json`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(gpFlag),
@@ -574,6 +668,7 @@ const GP = (() => {
   function testMxon(on) {
     _forceMxon = !!on;
     _mxonTestSlots = {}; // repart propre à chaque activation/désactivation
+    _mxonRealSeq = {};
     console.log(`[GP] MXoN test mode: ${_forceMxon ? "ON" : "OFF"}`);
     if (isOpen) _renderBody();
   }
@@ -752,7 +847,7 @@ const GP = (() => {
     _writeRace(cat, key, raceData, gpTitle, gpFlag);
 
     // Effacer le nœud live
-    fetch(`${FB_BASE}/gp/${wk}/live.json`, { method: "DELETE" }).catch(
+    fetch(`${_wkBase(wk)}/live.json`, { method: "DELETE" }).catch(
       () => {},
     );
     if (allGPs[wk]) allGPs[wk].live = null;
@@ -2057,7 +2152,7 @@ const GP = (() => {
     _liveLastSig = sig;
     _liveLastWriteTs = now;
 
-    fetch(`${FB_BASE}/gp/${wk}/live.json`, {
+    fetch(`${_wkBase(wk)}/live.json`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ cat, sessKey, ts: now, riders }),
