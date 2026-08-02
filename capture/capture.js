@@ -63,7 +63,7 @@ const html = fs.readFileSync(INDEX_HTML_PATH, "utf8");
 
 const dom = new JSDOM(html, {
   url: "https://livetiming.local/", // juste un référentiel, jamais fetché
-  runScripts: "outside-only", // les <script src> du HTML ne s'auto-exécutent PAS
+  runScripts: "dangerously", // requis pour exécuter nos <script> injectés ci-dessous
   pretendToBeVisual: true, // active requestAnimationFrame, getComputedStyle, etc.
 });
 
@@ -232,7 +232,17 @@ global.__MXGP_HEADLESS__ = true;
   }
   const code = fs.readFileSync(filePath, "utf8");
   try {
-    window.eval(code);
+    /* IMPORTANT : on injecte une VRAIE balise <script>, pas un eval().
+       Avec eval(), un `const GP = (() => {...})()` déclaré au top-level
+       reste piégé dans cet appel d'eval() précis et ne devient JAMAIS
+       une vraie variable globale visible par le <script> suivant — ce
+       qui rendait `typeof GP` égal à "undefined" dans main.js, et donc
+       GP.autoCapture() n'était JAMAIS appelée, silencieusement. De
+       vraies balises <script> partagent l'environnement global du
+       document, exactement comme dans un navigateur. */
+    const scriptEl = window.document.createElement("script");
+    scriptEl.textContent = code;
+    window.document.body.appendChild(scriptEl);
   } catch (e) {
     console.error(`❌ Erreur en chargeant ${file} :`, e);
     process.exit(1);
