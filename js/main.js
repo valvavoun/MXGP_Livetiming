@@ -125,17 +125,17 @@ const BRAND_NAMES = {
 /* ── Bike brand colours for nr-badge background ── */
 
 const BIKE_COLORS = {
-  KTM: { bg: "#ff6600", fg: "#fff" }, // Orange
-  HUS: { bg: "#969696", fg: "#fff" }, // Bleu foncé
-  GAS: { bg: "#ff1a1a", fg: "#fff" }, // Rouge clair (GasGas)
-  HON: { bg: "#cc0000", fg: "#fff" }, // Rouge pur (Honda)
-  KAW: { bg: "#00a651", fg: "#fff" }, // Vert
-  YAM: { bg: "#0033a0", fg: "#fff" }, // Bleu
-  TM: { bg: "#0057b8", fg: "#fff" }, // Bleu clair
-  TRI: { bg: "#ffd100", fg: "#fff" }, // Jaune Triumph 🔥
-  BET: { bg: "#a0002a", fg: "#fff" }, // Rouge foncé (Beta)
-  DUC: { bg: "#ffffff", fg: "#242424" }, // Rouge vif (Ducati)
-  FAN: { bg: "#1e1e1e", fg: "#fff" }, // Noir
+  KTM: { bg: "#ff6600", fg: "#121212" }, // Orange -> Noir doux (Contraste parfait)
+  HUS: { bg: "#969696", fg: "#121212" }, // Gris -> Noir doux
+  GAS: { bg: "#ff1a1a", fg: "#ffffff" }, // Rouge clair -> Blanc
+  HON: { bg: "#cc0000", fg: "#ffffff" }, // Rouge pur -> Blanc
+  KAW: { bg: "#00a651", fg: "#ffffff" }, // Vert -> Blanc
+  YAM: { bg: "#0033a0", fg: "#ffffff" }, // Bleu -> Blanc
+  TM: { bg: "#0057b8", fg: "#ffffff" }, // Bleu clair -> Blanc
+  TRI: { bg: "#ffd100", fg: "#121212" }, // Jaune Triumph -> Noir doux (Ultra lisible)
+  BET: { bg: "#a0002a", fg: "#ffffff" }, // Rouge foncé -> Blanc
+  DUC: { bg: "#fefefe", fg: "#1e1e1e" }, // Blanc cassé -> Anthracite foncé
+  FAN: { bg: "#1e1e1e", fg: "#ffffff" },
 };
 
 function getBikeStyle(bikeName) {

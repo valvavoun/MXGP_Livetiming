@@ -26,15 +26,14 @@ const GP = (() => {
   const CAT_COLORS = {
     MXGP: "#e8002d", // Rouge — Championnat du monde 450
     MX2: "#0057b8", // Bleu — Championnat du monde 250
-    WMX: "#9c27b0", // Violet — Championnat du monde féminin
+    WMX: "#e91e63", // Violet — Championnat du monde féminin
     EMX250: "#00a651", // Vert — Championnat d'Europe 250
     EMX125: "#ff8800", // Orange — Championnat d'Europe 125
-    EMXOPEN: "#757575", // Gris — Open
     MXON: "#f5c400", // Jaune/or — FIM Motocross of Nations
     EMX85: "#00bcd4", // Cyan — Championnat d'Europe 85
-    EMX65: "#e91e63", // Rose/magenta — Championnat d'Europe 65
+    EMX65: "#9c27b0", // Rose/magenta — Championnat d'Europe 65
     EMX2T: "#5d4037", // Marron foncé — Championnat d'Europe 2T
-    EMXOPEN: "#9e9e9e", // Gris clair — Championnat d'Europe Open
+    EMXOPEN: "#a6df00", // Gris clair — Championnat d'Europe Open
   };
 
   function _catColor(cat) {
@@ -248,7 +247,9 @@ const GP = (() => {
     /* Libellés alternatifs parfois utilisés (motos, manches numérotées
        autrement) — sécurité supplémentaire, notamment pour le MXoN dont
        on ne connaît pas le libellé exact à l'avance. */
-    if (s.match(/\bmoto\s*1\b|\bheat\s*1\b|\b1(st|ère|er)?\s*(moto|heat|leg)\b/))
+    if (
+      s.match(/\bmoto\s*1\b|\bheat\s*1\b|\b1(st|ère|er)?\s*(moto|heat|leg)\b/)
+    )
       return "R1";
     if (s.match(/\bmoto\s*2\b|\bheat\s*2\b|\b2(nd|ème)?\s*(moto|heat|leg)\b/))
       return "R2";
@@ -273,9 +274,10 @@ const GP = (() => {
   const _mxonRealOrder = ["R1", "R2", "R3"];
 
   function _mxonRealSessionKey(meta) {
-    const label = `${meta.category || ""}|${meta.sessType || ""}|${meta.title || ""}|${meta.time || ""}`
-      .trim()
-      .toLowerCase();
+    const label =
+      `${meta.category || ""}|${meta.sessType || ""}|${meta.title || ""}|${meta.time || ""}`
+        .trim()
+        .toLowerCase();
     if (/practice|warm[\s-]?up/.test(label)) return null; // jamais noté
     /* Catégories support (jeunes / finales de repêchage) présentes le
        même week-end sur le programme officiel, mais hors compétition
@@ -847,9 +849,7 @@ const GP = (() => {
     _writeRace(cat, key, raceData, gpTitle, gpFlag);
 
     // Effacer le nœud live
-    fetch(`${_wkBase(wk)}/live.json`, { method: "DELETE" }).catch(
-      () => {},
-    );
+    fetch(`${_wkBase(wk)}/live.json`, { method: "DELETE" }).catch(() => {});
     if (allGPs[wk]) allGPs[wk].live = null;
 
     // Reset détection de changement — repart propre pour la prochaine session
@@ -1234,7 +1234,9 @@ const GP = (() => {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         if (body) body.scrollTop = savedTop;
-        const newWraps = body ? [...body.querySelectorAll(".gp-table-wrap")] : [];
+        const newWraps = body
+          ? [...body.querySelectorAll(".gp-table-wrap")]
+          : [];
         newWraps.forEach((w, i) => {
           if (savedLefts[i] > 0) w.scrollLeft = savedLefts[i];
         });
