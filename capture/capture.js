@@ -187,10 +187,10 @@ window.fetch = async (input, opts = {}) => {
           (body ? ` — ${body.slice(0, 300)}` : ""),
       );
     }
-  } else if (isMxgpCall) {
+  } else if (isMxgpCall && !res.ok) {
     const ms = Date.now() - t0;
-    console.log(
-      `[MXGP-HTTP] ${res.ok ? "✅" : "❌"} ${method} ${_shortUrl(url)} → ${res.status} (${ms}ms)`,
+    console.error(
+      `[MXGP-HTTP] ❌ ${method} ${_shortUrl(url)} → ${res.status} (${ms}ms)`,
     );
   }
 

@@ -737,6 +737,9 @@ const GP = (() => {
     activeCat = cat;
     activeTab = key;
 
+    console.log(
+      `[GP] ✅ SAVED — ${cat} ${RACE_LABEL[key]} — ${results.length} riders`,
+    );
     _showNotif(
       `✔ AUTO-SAVE  ${cat} · ${RACE_LABEL[key]}  —  ${results.length} riders`,
     );

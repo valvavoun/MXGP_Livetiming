@@ -539,21 +539,6 @@ function onMsg(msg) {
 
   const { meta, riders, bestSecTimes, bestLap } = parse(raw);
 
-  /* ── HEARTBEAT DE DEBUG ──────────────────────────────────────────
-     Log périodique (toutes les ~60s) montrant EXACTEMENT ce que le
-     flux envoie — msgCount, statut brut, catégorie, session, nombre
-     de pilotes. Objectif : ne plus jamais avoir à deviner si des
-     messages arrivent ou non pendant une plage "silencieuse" dans les
-     logs (avant, seul un changement de session était loggé). */
-  if (!onMsg._lastHb || Date.now() - onMsg._lastHb > 60_000) {
-    onMsg._lastHb = Date.now();
-    console.log(
-      `[HB] msg#${msgCount} status="${meta.status || ""}" time="${meta.time || ""}" ` +
-        `cat=${meta.category || "?"} sess=${meta.sessType || "?"} riders=${riders?.length || 0} ` +
-        `sessionFinished=${sessionFinished}`,
-    );
-  }
-
   /* Mettre à jour le cache du meta avec les données valides */
   if (meta.category && meta.sessType) {
     cachedMeta = { ...meta };
@@ -605,10 +590,6 @@ function onMsg(msg) {
       .toLowerCase()
       .includes("finish");
     if (isFinished) {
-      console.log(
-        `[FINISH-DETECT] status="${meta.status || ""}" time="${meta.time || ""}" ` +
-          `sessionFinished(avant)=${sessionFinished} GP=${typeof GP !== "undefined"} riders=${riders?.length || 0}`,
-      );
       /* ── Auto-save GP results on FIRST finish detection ── */
       let captureHandled = true; // par défaut : rien à faire (GP absent, etc.)
       if (!sessionFinished && typeof GP !== "undefined") {
@@ -639,9 +620,6 @@ function onMsg(msg) {
         }
       }
       if (captureHandled) sessionFinished = true;
-      console.log(
-        `[FINISH-DETECT] → captureHandled=${captureHandled} sessionFinished(après)=${sessionFinished}`,
-      );
       setUI("finished", "FINISHED", "", "");
     } else if (!sessionFinished) {
       setUI("live", "LIVE", "✔ Connected — liveresults.mxgp.com", "");
