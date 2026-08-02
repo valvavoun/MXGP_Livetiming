@@ -218,6 +218,17 @@ let ws = null;
 let msgCount = 0;
 let retries = 0;
 let retryTmr = null;
+/* Watchdog anti-connexion "zombie" : certaines coupures réseau ne
+   déclenchent JAMAIS onerror/onclose (pas de frame de fermeture
+   envoyée) — le WebSocket reste "ouvert" côté client mais ne reçoit
+   plus jamais rien. Sans surveillance, ça bloque indéfiniment,
+   surtout sur un process qui tourne des heures sans interruption
+   (script headless). On force une reconnexion si rien n'est reçu
+   depuis WATCHDOG_MS. */
+const WATCHDOG_MS = 4 * 60 * 1000; // 4 min sans le moindre message
+const WATCHDOG_CHECK_MS = 30 * 1000; // vérifié toutes les 30 s
+let lastMsgTs = Date.now();
+let watchdogStarted = false;
 
 let prevRender = {}; // nr → { pos, ll, posCls }  — posCls persists until next lap change
 let sectorState = {}; // nr → { s1:{val,st}, s1_pb, s2..s4 } — persistent sector colours
@@ -415,6 +426,8 @@ function connectWS(token) {
 
   ws.onopen = () => {
     retries = 0;
+    lastMsgTs = Date.now(); // repart de zéro — laisse le temps au 1er message d'arriver
+    _startWatchdog();
     lg("WS", "✅ Connected");
     /* Reset position tracking — évite les faux pos-gained/lost après reconnexion */
     Object.values(posColorState).forEach((s) => clearTimeout(s.timerId));
@@ -439,6 +452,7 @@ function connectWS(token) {
 
   ws.onmessage = (ev) => {
     msgCount++;
+    lastMsgTs = Date.now();
     try {
       const data = JSON.parse(ev.data);
       if (delayMs === 0) {
@@ -476,6 +490,24 @@ async function sendStart(token) {
   } catch (e) {}
 }
 
+function _startWatchdog() {
+  if (watchdogStarted) return; // un seul intervalle pour toute la durée du script
+  watchdogStarted = true;
+  setInterval(() => {
+    if (!ws || ws.readyState !== 1 /* OPEN */) return;
+    const silentMs = Date.now() - lastMsgTs;
+    if (silentMs > WATCHDOG_MS) {
+      lg(
+        "WATCHDOG",
+        `⚠ Aucun message depuis ${Math.round(silentMs / 1000)}s — reconnexion forcée`,
+      );
+      try {
+        ws.close(); // déclenche onclose → scheduleRetry() → reconnexion normale
+      } catch (e) {}
+    }
+  }, WATCHDOG_CHECK_MS);
+}
+
 function scheduleRetry() {
   if (retryTmr) return;
   if (retries >= CFG.retryMax) {
@@ -506,6 +538,21 @@ function onMsg(msg) {
   if (raw.trim()[0] === "{" || raw.trim()[0] === "[") return;
 
   const { meta, riders, bestSecTimes, bestLap } = parse(raw);
+
+  /* ── HEARTBEAT DE DEBUG ──────────────────────────────────────────
+     Log périodique (toutes les ~60s) montrant EXACTEMENT ce que le
+     flux envoie — msgCount, statut brut, catégorie, session, nombre
+     de pilotes. Objectif : ne plus jamais avoir à deviner si des
+     messages arrivent ou non pendant une plage "silencieuse" dans les
+     logs (avant, seul un changement de session était loggé). */
+  if (!onMsg._lastHb || Date.now() - onMsg._lastHb > 60_000) {
+    onMsg._lastHb = Date.now();
+    console.log(
+      `[HB] msg#${msgCount} status="${meta.status || ""}" time="${meta.time || ""}" ` +
+        `cat=${meta.category || "?"} sess=${meta.sessType || "?"} riders=${riders?.length || 0} ` +
+        `sessionFinished=${sessionFinished}`,
+    );
+  }
 
   /* Mettre à jour le cache du meta avec les données valides */
   if (meta.category && meta.sessType) {
@@ -558,6 +605,10 @@ function onMsg(msg) {
       .toLowerCase()
       .includes("finish");
     if (isFinished) {
+      console.log(
+        `[FINISH-DETECT] status="${meta.status || ""}" time="${meta.time || ""}" ` +
+          `sessionFinished(avant)=${sessionFinished} GP=${typeof GP !== "undefined"} riders=${riders?.length || 0}`,
+      );
       /* ── Auto-save GP results on FIRST finish detection ── */
       let captureHandled = true; // par défaut : rien à faire (GP absent, etc.)
       if (!sessionFinished && typeof GP !== "undefined") {
@@ -588,6 +639,9 @@ function onMsg(msg) {
         }
       }
       if (captureHandled) sessionFinished = true;
+      console.log(
+        `[FINISH-DETECT] → captureHandled=${captureHandled} sessionFinished(après)=${sessionFinished}`,
+      );
       setUI("finished", "FINISHED", "", "");
     } else if (!sessionFinished) {
       setUI("live", "LIVE", "✔ Connected — liveresults.mxgp.com", "");
