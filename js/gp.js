@@ -1664,9 +1664,17 @@ const GP = (() => {
       return;
     }
 
-    const autoLabel = race.auto
-      ? '<span class="gp-race-auto">AUTO-SAVED</span>'
-      : "";
+    /* Indicateur discret : cette branche de rendu n'est atteinte QUE
+       quand `race` vient réellement de allGPs (donc de Firebase, donc
+       persisté) — jamais pour un aperçu live temporaire (voir
+       _previewTable, qui affiche "🔴 LIVE" séparément). On l'affiche
+       donc systématiquement ici, avec un libellé qui précise en plus
+       si c'était une sauvegarde automatique. */
+    const autoLabel = `<span class="gp-race-auto" title="${
+      race.auto
+        ? "Sauvegardé automatiquement en base de données"
+        : "Sauvegardé en base de données"
+    }">💾 ${race.auto ? "AUTO-SAVED" : "SAVED"}</span>`;
 
     let html = `<div class="gp-race-header">
       <span class="gp-race-label">${RACE_LABEL[key]}</span>
