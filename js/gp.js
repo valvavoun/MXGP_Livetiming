@@ -26,14 +26,15 @@ const GP = (() => {
   const CAT_COLORS = {
     MXGP: "#e8002d", // Rouge — Championnat du monde 450
     MX2: "#0057b8", // Bleu — Championnat du monde 250
-    WMX: "#e91e63", // Violet — Championnat du monde féminin
+    WMX: "#9c27b0", // Violet — Championnat du monde féminin
     EMX250: "#00a651", // Vert — Championnat d'Europe 250
     EMX125: "#ff8800", // Orange — Championnat d'Europe 125
+    EMXOPEN: "#757575", // Gris — Open
     MXON: "#f5c400", // Jaune/or — FIM Motocross of Nations
     EMX85: "#00bcd4", // Cyan — Championnat d'Europe 85
-    EMX65: "#9c27b0", // Rose/magenta — Championnat d'Europe 65
+    EMX65: "#e91e63", // Rose/magenta — Championnat d'Europe 65
     EMX2T: "#5d4037", // Marron foncé — Championnat d'Europe 2T
-    EMXOPEN: "#a6df00", // Gris clair — Championnat d'Europe Open
+    EMXOPEN: "#9e9e9e", // Gris clair — Championnat d'Europe Open
   };
 
   function _catColor(cat) {
@@ -656,6 +657,18 @@ const GP = (() => {
           "[GP] MXoN TEST MODE enabled via ?mxontest=1 — remove the param (or run GP.testMxon(false) in the console) to go back to normal.",
         );
       }
+      /* Déclencheur mobile-friendly, équivalent à GP.editMode() en
+         console mais accessible sans DevTools (peu pratique sur
+         téléphone). Toujours aussi invisible : un visiteur normal ne
+         devine pas ce paramètre. Retirer le paramètre de l'URL juste
+         après pour ne pas le laisser traîner dans l'historique/URL
+         partagée. */
+      if (new URLSearchParams(location.search).get("edit") === "1") {
+        const url = new URL(location.href);
+        url.searchParams.delete("edit");
+        history.replaceState({}, "", url);
+        setTimeout(() => editMode(), 300); // après que _buildPanel() ait tourné
+      }
     } catch (e) {}
     _buildPanel();
     _injectHeaderButton();
@@ -895,7 +908,6 @@ const GP = (() => {
         </div>
         <div class="gp-topbar-right">
           <span class="gp-sync-indicator" id="gp-sync" title="Firebase sync">●</span>
-          <button class="gp-capture-btn" id="gp-capture-btn" hidden title="Capture current session results">⬇</button>
           <button class="gp-close" id="gp-close" title="Close (Esc)">✕</button>
         </div>
       </div>
@@ -919,9 +931,6 @@ const GP = (() => {
     document.body.appendChild(panel);
 
     document.getElementById("gp-close").addEventListener("click", _close);
-    document
-      .getElementById("gp-capture-btn")
-      .addEventListener("click", _capture);
     _updateSyncIndicator(false);
   }
 
@@ -1031,8 +1040,6 @@ const GP = (() => {
     if (activeWeek === "season") {
       _renderSeasonView();
     } else if (activeWeek === "stats") {
-      const captureBtn = document.getElementById("gp-capture-btn");
-      if (captureBtn) captureBtn.hidden = true;
       const tabs = document.getElementById("gp-tabs");
       if (tabs) tabs.innerHTML = "";
 
@@ -1196,6 +1203,68 @@ const GP = (() => {
         _renderBody();
       });
 
+      // Clic droit → menu contextuel caché "✏ Modifier", UNIQUEMENT si
+      // déjà authentifié (via GP.editMode() en console/URL au préalable).
+      // Pour tout le monde d'autre : menu natif du navigateur, inchangé,
+      // aucune trace visible que quoi que ce soit soit modifiable.
+      const _openGpCtx = (x, y) => {
+        const targetCat =
+          wk === activeWeek && catKeys.includes(activeCat)
+            ? activeCat
+            : catKeys[0] || "";
+        _gpContextMenu(x, y, wk, targetCat);
+      };
+
+      entry.addEventListener("contextmenu", (e) => {
+        if (!_isEditAuthed()) return; // pas de preventDefault → menu natif normal
+        e.preventDefault();
+        _openGpCtx(e.clientX, e.clientY);
+      });
+
+      // Appui long (mobile) — équivalent tactile du clic droit. Ne se
+      // déclenche que si déjà authentifié, exactement comme sur
+      // desktop. Un simple tap normal (sélection du GP) n'est jamais
+      // affecté puisqu'un tap court ne dépasse jamais le délai.
+      let _lpTimer = null;
+      let _lpFired = false;
+      let _lpX = 0,
+        _lpY = 0;
+      entry.addEventListener(
+        "touchstart",
+        (e) => {
+          if (!_isEditAuthed()) return;
+          _lpFired = false;
+          const t = e.touches[0];
+          _lpX = t.clientX;
+          _lpY = t.clientY;
+          _lpTimer = setTimeout(() => {
+            _lpFired = true;
+            if (navigator.vibrate) navigator.vibrate(15); // petit retour haptique
+            _openGpCtx(_lpX, _lpY);
+          }, 550);
+        },
+        { passive: true },
+      );
+      entry.addEventListener("touchmove", (e) => {
+        // Le doigt bouge → on annule, ce n'est pas un appui long stable
+        const t = e.touches[0];
+        if (
+          Math.abs(t.clientX - _lpX) > 10 ||
+          Math.abs(t.clientY - _lpY) > 10
+        ) {
+          clearTimeout(_lpTimer);
+        }
+      });
+      entry.addEventListener("touchend", (e) => {
+        clearTimeout(_lpTimer);
+        if (_lpFired) {
+          // Empêche le "click" normal (sélection du GP) de se déclencher
+          // juste après un appui long qui a ouvert le menu.
+          e.preventDefault();
+        }
+      });
+      entry.addEventListener("touchcancel", () => clearTimeout(_lpTimer));
+
       sb.appendChild(entry);
     });
 
@@ -1250,11 +1319,7 @@ const GP = (() => {
   function _renderWeekView() {
     const wk = activeWeek || _weekKey();
     const isCurrentWk = wk === _weekKey();
-    const captureBtn = document.getElementById("gp-capture-btn");
     const body = document.getElementById("gp-body");
-
-    // Bouton capture : visible seulement pour la semaine courante
-    if (captureBtn) captureBtn.hidden = !isCurrentWk;
 
     // Sauvegarder scroll AVANT mise à jour
     _withScrollPreservation(() => {
@@ -1854,8 +1919,6 @@ const GP = (() => {
      SEASON VIEW
   ───────────────────────────────────────────────────────── */
   function _renderSeasonView() {
-    const captureBtn = document.getElementById("gp-capture-btn");
-    if (captureBtn) captureBtn.hidden = true;
     const tabs = document.getElementById("gp-tabs");
     const body = document.getElementById("gp-body");
     if (tabs) tabs.innerHTML = "";
@@ -2236,71 +2299,6 @@ const GP = (() => {
   }
 
   /* ─────────────────────────────────────────────────────────
-     CAPTURE MANUELLE
-  ───────────────────────────────────────────────────────── */
-  function _capture() {
-    if (!latestMeta && !currentCat) return _toast("No active session.");
-    const liveMeta = latestMeta || cachedMeta;
-    const key =
-      _inferSessionKey(liveMeta) || _normalizeSessionType(currentSess || "");
-    if (!key)
-      return _toast(
-        "Unrecognised session: " + (liveMeta?.sessType || currentSess || "?"),
-      );
-    if (!latestRiders.length) return _toast("No riders in session.");
-    let cat = _inferMetaCategory(liveMeta) || _normalizeCat(currentCat || "");
-    if (!cat) return _toast("Unknown category.");
-    if (cat === MXON_CAT && key === "QR")
-      return _toast("MXoN — Qualifying Race not counted, not saved.");
-
-    const wk = _weekKey();
-
-    if (!allGPs[wk]) allGPs[wk] = { cats: {}, live: null };
-    /* FIX: guard against cats being undefined */
-    if (!allGPs[wk].cats) allGPs[wk].cats = {};
-    if (!allGPs[wk].cats[cat]) allGPs[wk].cats[cat] = { name: "", races: {} };
-    const catD = allGPs[wk].cats[cat];
-    if (!catD.name) {
-      const gpTitle = (latestMeta?.title || "").split(" - ")[0]?.trim() || "";
-      if (gpTitle) catD.name = gpTitle;
-    }
-    const gpFlag =
-      latestMeta?.flag ||
-      latestMeta?.nat ||
-      latestMeta?.nation ||
-      latestMeta?.country ||
-      latestMeta?.nationality ||
-      "";
-    if (gpFlag && !allGPs[wk].flag) allGPs[wk].flag = gpFlag;
-
-    const results = latestRiders
-      .filter((r) => r.pos && r.pos > 0)
-      .sort((a, b) => a.pos - b.pos)
-      .map((r, i) => ({
-        pos: r.pos,
-        nr: r.nr,
-        fn: r.fn || "",
-        ln: r.ln || "",
-        bike: r.bike || "",
-        nation: r.nation || "",
-        pts: _ptsFor(cat, key, r.pos, i),
-      }));
-
-    const raceData = { ts: Date.now(), auto: false, cat, results };
-    catD.races[key] = raceData;
-    /* force=true → always overwrite Firebase, even if a red-flag result was
-       previously auto-saved. This is the main recovery path for restarts. */
-    _writeRace(cat, key, raceData, catD.name, gpFlag, true);
-
-    activeWeek = wk;
-    activeCat = cat;
-    activeTab = key;
-    _updateHeaderBtn();
-    _renderBody();
-    _toast(`✔ ${RACE_LABEL[key]} ${cat} saved — ${results.length} riders`);
-  }
-
-  /* ─────────────────────────────────────────────────────────
      LIVE AGE
   ───────────────────────────────────────────────────────── */
   function _startLiveAgeRefresh(liveTs) {
@@ -2413,7 +2411,592 @@ const GP = (() => {
     return rows.length ? String(rows[0].nr) : null;
   }
 
-  return { init, update, autoCapture, setCurrent, getChampLeader, testMxon };
+  /* ═══════════════════════════════════════════════════════════
+     ÉDITION MANUELLE NOM/FLAG — accès caché, réservé au propriétaire
+     Déclenchement UNIQUEMENT via la console navigateur : GP.editMode()
+     Aucun bouton, aucune icône, rien de visible sur la page tant que
+     cette fonction n'est pas appelée manuellement — il faut savoir
+     qu'elle existe pour pouvoir l'utiliser.
+
+     Sécurité : authentification Firebase (Auth), et seul le compte
+     dont l'UID correspond exactement à OWNER_UID est autorisé à
+     écrire — vérifié ICI (confort) ET dans les règles Firebase
+     (sécurité réelle : même en cas de bug côté JS, rien ne fuit,
+     Firebase refuse toute écriture d'un autre compte).
+
+     N'affecte en rien le script headless (capture.js), qui continue
+     d'utiliser le secret DB existant, totalement indépendant de ceci.
+  ═══════════════════════════════════════════════════════════ */
+  const OWNER_UID = "iN8nLbldsETEaLu7fMHmUs3s9tn1";
+  let _fbAuth = null;
+  let _fbDb = null;
+
+  function _fbEnsureInit() {
+    if (_fbAuth && _fbDb) return true;
+    if (typeof firebase === "undefined") {
+      console.error(
+        "[GP] Firebase SDK non chargé — vérifie les balises <script> dans index.html.",
+      );
+      return false;
+    }
+    if (!firebase.apps.length) {
+      firebase.initializeApp({
+        apiKey: "AIzaSyCCce_sgg9SmlkzW9l4QIV_ymt-9Eyc3mQ",
+        authDomain: "livetiming-d4c0b.firebaseapp.com",
+        databaseURL:
+          "https://livetiming-d4c0b-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "livetiming-d4c0b",
+      });
+    }
+    _fbAuth = firebase.auth();
+    _fbDb = firebase.database();
+    return true;
+  }
+
+  function _editOverlay() {
+    const ov = document.createElement("div");
+    ov.id = "gp-edit-overlay";
+    ov.style.cssText =
+      "position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:99999;" +
+      "display:flex;align-items:center;justify-content:center;" +
+      "font-family:Arial,sans-serif;";
+    document.body.appendChild(ov);
+    ov.addEventListener("click", (e) => {
+      if (e.target === ov) ov.remove();
+    });
+    return ov;
+  }
+
+  /* true UNIQUEMENT si GP.editMode() a déjà été appelé au moins une
+     fois (donc _fbAuth existe) ET que la connexion a réussi avec le
+     bon compte. Ne déclenche JAMAIS d'initialisation Firebase toute
+     seule — tant que la commande console n'a pas été utilisée,
+     _fbAuth reste null et cette fonction retourne false sans aucun
+     effet de bord (aucune requête réseau déclenchée). */
+  function _isEditAuthed() {
+    return !!(
+      _fbAuth &&
+      _fbAuth.currentUser &&
+      _fbAuth.currentUser.uid === OWNER_UID
+    );
+  }
+
+  /* Petit menu contextuel custom (clic droit) — ne remplace le menu
+     natif du navigateur QUE sur les entrées de la liste des GP. Reste
+     invisible/inexistant partout ailleurs sur la page. */
+  function _gpContextMenu(x, y, wk, cat) {
+    document.getElementById("gp-ctx-menu")?.remove();
+    const menu = document.createElement("div");
+    menu.id = "gp-ctx-menu";
+    // Clamp pour ne jamais déborder de l'écran (important sur mobile,
+    // où l'appui long peut avoir lieu près d'un bord).
+    const menuW = 170;
+    const menuH = 120;
+    const cx = Math.min(x, window.innerWidth - menuW - 8);
+    const cy = Math.min(y, window.innerHeight - menuH - 8);
+    menu.style.cssText =
+      `position:fixed;left:${Math.max(8, cx)}px;top:${Math.max(8, cy)}px;z-index:99999;` +
+      "background:#12141f;border:1px solid rgba(255,255,255,.15);" +
+      "border-radius:6px;padding:4px;font-family:Arial,sans-serif;" +
+      "font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.5);";
+    menu.innerHTML =
+      '<div id="gpCtxEdit" style="padding:7px 14px;color:#fff;cursor:pointer;border-radius:4px;white-space:nowrap;">✏ Modifier nom/flag</div>' +
+      '<div id="gpCtxAdd" style="padding:7px 14px;color:#fff;cursor:pointer;border-radius:4px;white-space:nowrap;">➕ Manche oubliée</div>' +
+      '<div id="gpCtxPen" style="padding:7px 14px;color:#fff;cursor:pointer;border-radius:4px;white-space:nowrap;">🚩 Pénalités</div>';
+    document.body.appendChild(menu);
+
+    [
+      ["gpCtxEdit", () => editMode(wk, cat)],
+      ["gpCtxAdd", () => _addMissedRaceUI(wk, cat)],
+      ["gpCtxPen", () => _penaltyUI(wk, cat)],
+    ].forEach(([id, fn]) => {
+      const el = menu.querySelector("#" + id);
+      el.addEventListener("mouseenter", () => {
+        el.style.background = "rgba(255,255,255,.08)";
+      });
+      el.addEventListener("mouseleave", () => {
+        el.style.background = "transparent";
+      });
+      el.addEventListener("click", () => {
+        menu.remove();
+        fn();
+      });
+    });
+
+    const closeMenu = (ev) => {
+      if (!menu.contains(ev.target)) {
+        menu.remove();
+        document.removeEventListener("click", closeMenu);
+      }
+    };
+    // setTimeout : évite que le clic droit qui vient d'ouvrir le menu
+    // ne le referme immédiatement via ce même listener
+    setTimeout(() => document.addEventListener("click", closeMenu), 0);
+  }
+
+  /* Helper réutilisable : affiche la connexion si besoin, puis appelle
+     onSuccess() une fois authentifié avec le bon compte. Indépendant
+     de editMode() pour ne prendre aucun risque sur ce qui fonctionne
+     déjà. */
+  function _requireAuth(onSuccess) {
+    if (!_fbEnsureInit()) return;
+    if (_isEditAuthed()) return onSuccess();
+
+    document.getElementById("gp-edit-overlay")?.remove();
+    const ov = _editOverlay();
+    const box = document.createElement("div");
+    box.style.cssText =
+      "background:#12141f;border:1px solid rgba(255,255,255,.15);" +
+      "border-radius:8px;padding:20px;width:280px;color:#fff;font-size:13px;";
+    ov.appendChild(box);
+    const fieldCss =
+      "width:100%;box-sizing:border-box;margin:4px 0 10px;padding:7px;" +
+      "background:#1a1d2c;color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:4px;";
+    const btnCss =
+      "width:100%;padding:8px;border:none;border-radius:4px;cursor:pointer;" +
+      "margin-bottom:6px;font-weight:600;";
+
+    box.innerHTML =
+      '<div style="font-weight:700;margin-bottom:10px;">🔒 Connexion</div>' +
+      `<input id="gpAuthEmail" type="email" placeholder="Email" style="${fieldCss}">` +
+      `<input id="gpAuthPass" type="password" placeholder="Mot de passe" style="${fieldCss}">` +
+      `<button id="gpAuthBtn" style="${btnCss}background:#e8002d;color:#fff;">Se connecter</button>` +
+      '<div id="gpAuthErr" style="color:#ff6b6b;font-size:11px;"></div>';
+
+    box.querySelector("#gpAuthBtn").addEventListener("click", async () => {
+      const email = box.querySelector("#gpAuthEmail").value.trim();
+      const pass = box.querySelector("#gpAuthPass").value;
+      const errEl = box.querySelector("#gpAuthErr");
+      try {
+        const cred = await _fbAuth.signInWithEmailAndPassword(email, pass);
+        if (cred.user.uid !== OWNER_UID) {
+          await _fbAuth.signOut();
+          errEl.textContent = "Compte non autorisé.";
+          return;
+        }
+        ov.remove();
+        onSuccess();
+      } catch (e) {
+        errEl.textContent = "Échec de connexion.";
+      }
+    });
+  }
+
+  /* ─────────────────────────────────────────────────────────
+     MANCHE OUBLIÉE — coller des données tabulées (même format que
+     l'outil parseur externe), parsées et écrites directement en DB
+     via le compte authentifié. Plus besoin de passer par la console
+     Firebase à la main.
+  ───────────────────────────────────────────────────────── */
+  const _BIKE_MAP = {
+    honda: "HON",
+    kawasaki: "KAW",
+    ktm: "KTM",
+    yamaha: "YAM",
+    husqvarna: "HUS",
+    gasgas: "GAS",
+    ducati: "DUC",
+    fantic: "FAN",
+    tm: "TM",
+    beta: "BET",
+    sherco: "SHE",
+    triumph: "TRI",
+    stark: "STK",
+  };
+
+  function _abbrevBike(raw) {
+    if (!raw) return "???";
+    const key = raw.toLowerCase().replace(/[^a-z]/g, "");
+    for (const [k, v] of Object.entries(_BIKE_MAP)) {
+      if (key === k || key.startsWith(k)) return v;
+    }
+    return raw.slice(0, 3).toUpperCase();
+  }
+
+  function _splitRider(raw) {
+    if (!raw) return { fn: "", ln: "" };
+    if (raw.includes(",")) {
+      const comma = raw.indexOf(",");
+      return {
+        fn: raw.slice(comma + 1).trim(),
+        ln: raw.slice(0, comma).trim(),
+      };
+    }
+    const parts = raw.trim().split(/\s+/);
+    return { fn: parts[0] || "", ln: parts.slice(1).join(" ") };
+  }
+
+  /* Parse le texte collé (colonnes séparées par tabulation, comme le
+     parseur externe) en tableau { bike, fn, ln, nr, pos }, sans les
+     points — les points sont calculés séparément via _ptsFor(), pour
+     rester cohérent avec le barème réel de l'appli (QR/MXoN inclus). */
+  function _parsePastedResults(raw) {
+    const lines = raw
+      .trim()
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
+    const out = [];
+    for (const line of lines) {
+      const cols = line.split("\t").map((c) => c.trim());
+      if (cols.length < 3) continue;
+      const pos = parseInt(cols[0]);
+      if (isNaN(pos) || pos < 1 || pos > 40) continue;
+      const nr = cols[1] || "";
+      const riderRaw = cols[2] || "";
+      const bike = cols[5] || cols[4] || "";
+      if (!riderRaw) continue;
+      const { fn, ln } = _splitRider(riderRaw);
+      out.push({ bike: _abbrevBike(bike), fn, ln, nr, pos });
+    }
+    out.sort((a, b) => a.pos - b.pos);
+    return out;
+  }
+
+  function _addMissedRaceUI(wk, cat) {
+    _requireAuth(() => {
+      document.getElementById("gp-edit-overlay")?.remove();
+      const ov = _editOverlay();
+      const box = document.createElement("div");
+      box.style.cssText =
+        "background:#12141f;border:1px solid rgba(255,255,255,.15);" +
+        "border-radius:8px;padding:20px;width:360px;max-width:90vw;" +
+        "color:#fff;font-size:13px;";
+      ov.appendChild(box);
+      const close = () => ov.remove();
+      const fieldCss =
+        "width:100%;box-sizing:border-box;margin:4px 0 10px;padding:7px;" +
+        "background:#1a1d2c;color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:4px;";
+      const btnCss =
+        "width:100%;padding:8px;border:none;border-radius:4px;cursor:pointer;" +
+        "margin-bottom:6px;font-weight:600;";
+
+      const catOptions = Object.keys(allGPs[wk]?.cats || {})
+        .concat(cat ? [cat] : [])
+        .filter((v, i, a) => a.indexOf(v) === i);
+
+      box.innerHTML =
+        `<div style="font-weight:700;margin-bottom:10px;">➕ Manche oubliée — ${wk}</div>` +
+        '<label style="font-size:11px;opacity:.6;">Catégorie</label>' +
+        `<input id="gpAddCat" list="gpAddCatList" value="${cat || ""}" style="${fieldCss}">` +
+        `<datalist id="gpAddCatList">${catOptions
+          .map((c) => `<option value="${c}">`)
+          .join("")}</datalist>` +
+        '<label style="font-size:11px;opacity:.6;">Manche</label>' +
+        `<select id="gpAddKey" style="${fieldCss}">${RACE_ORDER.map(
+          (k) => `<option value="${k}">${RACE_LABEL[k]}</option>`,
+        ).join("")}</select>` +
+        '<label style="font-size:11px;opacity:.6;">Coller les données (pos / nr / pilote / .../ bike, séparées par tabulation)</label>' +
+        `<textarea id="gpAddData" rows="6" style="${fieldCss}font-family:monospace;font-size:11px;" placeholder="Colle ici, comme dans le parseur..."></textarea>` +
+        '<div id="gpAddPreview" style="font-size:11px;opacity:.7;margin-bottom:8px;"></div>' +
+        `<button id="gpAddSaveBtn" style="${btnCss}background:#00cc55;color:#fff;">Parser & Enregistrer</button>` +
+        `<button id="gpAddCancelBtn" style="${btnCss}background:transparent;color:#999;border:1px solid #333;">Annuler</button>` +
+        '<div id="gpAddErr" style="color:#ff6b6b;font-size:11px;"></div>';
+
+      const dataEl = box.querySelector("#gpAddData");
+      const previewEl = box.querySelector("#gpAddPreview");
+      dataEl.addEventListener("input", () => {
+        const n = _parsePastedResults(dataEl.value).length;
+        previewEl.textContent = n ? `${n} pilote(s) détecté(s)` : "";
+      });
+
+      box.querySelector("#gpAddCancelBtn").addEventListener("click", close);
+
+      box.querySelector("#gpAddSaveBtn").addEventListener("click", async () => {
+        const errEl = box.querySelector("#gpAddErr");
+        const targetCat = box
+          .querySelector("#gpAddCat")
+          .value.trim()
+          .toUpperCase();
+        const key = box.querySelector("#gpAddKey").value;
+        if (!targetCat) {
+          errEl.textContent = "Catégorie requise.";
+          return;
+        }
+        const parsed = _parsePastedResults(dataEl.value);
+        if (!parsed.length) {
+          errEl.textContent = "Aucune ligne valide détectée.";
+          return;
+        }
+
+        // Sécurité : si une manche existe déjà à cet emplacement,
+        // demander confirmation avant d'écraser — sinon .set() la
+        // remplace silencieusement, sans retour en arrière possible.
+        const existing = allGPs[wk]?.cats?.[targetCat]?.races?.[key];
+        if (existing) {
+          const existingCount = existing.results?.length || 0;
+          const ok = confirm(
+            `⚠ ${targetCat} ${RACE_LABEL[key]} existe déjà en base ` +
+              `(${existingCount} pilote(s) enregistrés).\n\n` +
+              `Continuer va DÉFINITIVEMENT ÉCRASER ce résultat par les ` +
+              `${parsed.length} pilote(s) que tu viens de coller.\n\n` +
+              `Confirmer l'écrasement ?`,
+          );
+          if (!ok) return;
+        }
+
+        const results = parsed.map((r, i) => ({
+          ...r,
+          nation: "",
+          pts: _ptsFor(targetCat, key, r.pos, i),
+        }));
+        const raceData = {
+          ts: Date.now(),
+          auto: false,
+          cat: targetCat,
+          results,
+        };
+        try {
+          const base = `gp/${wk.slice(0, 4)}/${wk}`;
+          await _fbDb
+            .ref(`${base}/cats/${targetCat}/races/${key}`)
+            .set(raceData);
+          close();
+          console.log(
+            `[GP] ✅ Manche ajoutée manuellement — ${targetCat} ${RACE_LABEL[key]} — ${results.length} pilotes`,
+          );
+        } catch (e) {
+          errEl.textContent = "Échec : " + (e.message || e);
+        }
+      });
+    });
+  }
+
+  /* ─────────────────────────────────────────────────────────
+     PÉNALITÉS — liste, ajout, suppression, depuis la page,
+     sans passer par la console Firebase.
+  ───────────────────────────────────────────────────────── */
+  function _penaltyUI(wk, cat) {
+    _requireAuth(() => {
+      document.getElementById("gp-edit-overlay")?.remove();
+      const ov = _editOverlay();
+      const box = document.createElement("div");
+      box.style.cssText =
+        "background:#12141f;border:1px solid rgba(255,255,255,.15);" +
+        "border-radius:8px;padding:20px;width:320px;max-width:90vw;" +
+        "color:#fff;font-size:13px;";
+      ov.appendChild(box);
+      const close = () => ov.remove();
+      const fieldCss =
+        "box-sizing:border-box;padding:7px;background:#1a1d2c;color:#fff;" +
+        "border:1px solid rgba(255,255,255,.15);border-radius:4px;";
+      const btnCss =
+        "width:100%;padding:8px;border:none;border-radius:4px;cursor:pointer;" +
+        "margin-bottom:6px;font-weight:600;";
+      const year = wk.slice(0, 4);
+
+      function currentList() {
+        const pens = allGPs._penalties?.[year]?.[cat] || {};
+        return Object.entries(pens).filter(([, pts]) => pts > 0);
+      }
+
+      function render() {
+        const list = currentList();
+        const rowsHtml = list.length
+          ? list
+              .map(
+                ([nr, pts]) =>
+                  `<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">` +
+                  `<span style="flex:1;">#${nr}</span>` +
+                  `<span style="opacity:.7;">-${pts} pts</span>` +
+                  `<button data-nr="${nr}" data-pts="${pts}" class="gpPenEdit" title="Modifier" style="padding:3px 8px;background:transparent;color:#64b4ff;border:1px solid rgba(100,180,255,.4);border-radius:4px;cursor:pointer;">✎</button>` +
+                  `<button data-nr="${nr}" class="gpPenDel" title="Supprimer" style="padding:3px 8px;background:transparent;color:#ff6b6b;border:1px solid rgba(255,107,107,.4);border-radius:4px;cursor:pointer;">✕</button>` +
+                  `</div>`,
+              )
+              .join("")
+          : '<div style="opacity:.5;margin-bottom:10px;">Aucune pénalité active.</div>';
+
+        box.innerHTML =
+          `<div style="font-weight:700;margin-bottom:10px;">🚩 Pénalités — ${cat} ${year}</div>` +
+          `<div id="gpPenList" style="margin-bottom:12px;">${rowsHtml}</div>` +
+          '<div style="display:flex;gap:6px;margin-bottom:10px;">' +
+          `<input id="gpPenNr" placeholder="N°" style="${fieldCss}width:70px;flex-shrink:0;">` +
+          `<input id="gpPenPts" type="number" min="1" placeholder="Points" style="${fieldCss}flex:1;min-width:0;">` +
+          `<button id="gpPenAddBtn" title="Ajouter / mettre à jour" style="${btnCss}width:auto;padding:7px 12px;margin:0;background:#e8002d;color:#fff;">+</button>` +
+          "</div>" +
+          `<button id="gpPenCloseBtn" style="${btnCss}background:transparent;color:#999;border:1px solid #333;">Fermer</button>` +
+          '<div id="gpPenErr" style="color:#ff6b6b;font-size:11px;"></div>';
+
+        box.querySelector("#gpPenCloseBtn").addEventListener("click", close);
+
+        box.querySelectorAll(".gpPenEdit").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            // Pré-remplit les champs avec la ligne cliquée — il suffit
+            // de changer les points puis de cliquer "+" pour écraser
+            // l'ancienne valeur (Firebase .set() remplace, pas besoin
+            // de supprimer avant).
+            box.querySelector("#gpPenNr").value = btn.dataset.nr;
+            box.querySelector("#gpPenPts").value = btn.dataset.pts;
+            box.querySelector("#gpPenPts").focus();
+            box.querySelector("#gpPenPts").select();
+          });
+        });
+
+        box.querySelectorAll(".gpPenDel").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const nr = btn.dataset.nr;
+            const errEl = box.querySelector("#gpPenErr");
+            try {
+              await _fbDb.ref(`gp/_penalties/${year}/${cat}/${nr}`).remove();
+              if (allGPs._penalties?.[year]?.[cat])
+                delete allGPs._penalties[year][cat][nr];
+              render();
+            } catch (e) {
+              errEl.textContent = "Échec : " + (e.message || e);
+            }
+          });
+        });
+
+        box
+          .querySelector("#gpPenAddBtn")
+          .addEventListener("click", async () => {
+            const nr = box.querySelector("#gpPenNr").value.trim();
+            const pts = parseInt(box.querySelector("#gpPenPts").value);
+            const errEl = box.querySelector("#gpPenErr");
+            if (!nr || !pts || pts < 1) {
+              errEl.textContent = "N° et points (>0) requis.";
+              return;
+            }
+            try {
+              await _fbDb.ref(`gp/_penalties/${year}/${cat}/${nr}`).set(pts);
+              if (!allGPs._penalties) allGPs._penalties = {};
+              if (!allGPs._penalties[year]) allGPs._penalties[year] = {};
+              if (!allGPs._penalties[year][cat])
+                allGPs._penalties[year][cat] = {};
+              allGPs._penalties[year][cat][nr] = pts;
+              render();
+            } catch (e) {
+              errEl.textContent = "Échec : " + (e.message || e);
+            }
+          });
+      }
+
+      render();
+    });
+  }
+
+  function editMode(targetWk, targetCat) {
+    if (!_fbEnsureInit()) return;
+    document.getElementById("gp-edit-overlay")?.remove(); // évite les doublons
+
+    // Déjà connecté et appelé sans cible (juste GP.editMode() en
+    // console, pas un clic droit) → rien à afficher, on confirme juste
+    // discrètement dans la console. L'édition se fait uniquement via
+    // clic droit → Modifier sur le GP voulu.
+    if (_fbAuth.currentUser && !targetWk && !targetCat) {
+      console.log(
+        "[GP] Déjà connecté — clic droit sur un GP dans la liste pour le modifier.",
+      );
+      return;
+    }
+
+    const ov = _editOverlay();
+    const box = document.createElement("div");
+    box.style.cssText =
+      "background:#12141f;border:1px solid rgba(255,255,255,.15);" +
+      "border-radius:8px;padding:20px;width:280px;color:#fff;font-size:13px;";
+    ov.appendChild(box);
+    const close = () => ov.remove();
+    const fieldCss =
+      "width:100%;box-sizing:border-box;margin:4px 0 10px;padding:7px;" +
+      "background:#1a1d2c;color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:4px;";
+    const btnCss =
+      "width:100%;padding:8px;border:none;border-radius:4px;cursor:pointer;" +
+      "margin-bottom:6px;font-weight:600;";
+
+    if (!_fbAuth.currentUser) {
+      box.innerHTML =
+        '<div style="font-weight:700;margin-bottom:10px;">🔒 Connexion</div>' +
+        `<input id="gpEditEmail" type="email" placeholder="Email" style="${fieldCss}">` +
+        `<input id="gpEditPass" type="password" placeholder="Mot de passe" style="${fieldCss}">` +
+        `<button id="gpEditLoginBtn" style="${btnCss}background:#e8002d;color:#fff;">Se connecter</button>` +
+        '<div id="gpEditErr" style="color:#ff6b6b;font-size:11px;"></div>';
+
+      box
+        .querySelector("#gpEditLoginBtn")
+        .addEventListener("click", async () => {
+          const email = box.querySelector("#gpEditEmail").value.trim();
+          const pass = box.querySelector("#gpEditPass").value;
+          const errEl = box.querySelector("#gpEditErr");
+          try {
+            const cred = await _fbAuth.signInWithEmailAndPassword(email, pass);
+            if (cred.user.uid !== OWNER_UID) {
+              await _fbAuth.signOut();
+              errEl.textContent = "Compte non autorisé.";
+              return;
+            }
+            close();
+            if (targetWk && targetCat) {
+              // Connexion venait d'un clic droit sur un GP précis →
+              // ouvrir directement son formulaire d'édition.
+              editMode(targetWk, targetCat);
+            } else {
+              // Connexion "à vide" (console) → rien à afficher, juste
+              // confirmer discrètement.
+              console.log(
+                "[GP] Connexion réussie — clic droit sur un GP dans la liste pour le modifier.",
+              );
+            }
+          } catch (e) {
+            errEl.textContent = "Échec de connexion.";
+          }
+        });
+      return;
+    }
+
+    // Cible explicite (clic droit sur une entrée précise) en priorité,
+    // sinon le GP actuellement affiché (usage console GP.editMode()).
+    const wk = targetWk || activeWeek || _weekKey();
+    const cat =
+      targetCat || activeCat || Object.keys(allGPs[wk]?.cats || {})[0];
+    if (!wk || !cat) {
+      box.innerHTML = "<div>Aucun GP actif à éditer.</div>";
+      return;
+    }
+    const curName = allGPs[wk]?.cats?.[cat]?.name || "";
+    const curFlag = allGPs[wk]?.flag || "";
+
+    box.innerHTML =
+      `<div style="font-weight:700;margin-bottom:10px;">✏ ${cat} — ${wk}</div>` +
+      '<label style="font-size:11px;opacity:.6;">Nom du GP</label>' +
+      `<input id="gpEditName" value="${curName.replace(/"/g, "&quot;")}" style="${fieldCss}">` +
+      '<label style="font-size:11px;opacity:.6;">Flag (emoji ou code pays)</label>' +
+      `<input id="gpEditFlag" value="${curFlag.replace(/"/g, "&quot;")}" style="${fieldCss}">` +
+      `<button id="gpEditSaveBtn" style="${btnCss}background:#00cc55;color:#fff;">Enregistrer</button>` +
+      `<button id="gpEditLogoutBtn" style="${btnCss}background:transparent;color:#999;border:1px solid #333;">Déconnexion</button>` +
+      '<div id="gpEditErr" style="color:#ff6b6b;font-size:11px;"></div>';
+
+    box.querySelector("#gpEditSaveBtn").addEventListener("click", async () => {
+      const name = box.querySelector("#gpEditName").value.trim();
+      const flag = box.querySelector("#gpEditFlag").value.trim();
+      const errEl = box.querySelector("#gpEditErr");
+      try {
+        const base = `gp/${wk.slice(0, 4)}/${wk}`;
+        await _fbDb.ref(`${base}/cats/${cat}/name`).set(name || null);
+        await _fbDb.ref(`${base}/flag`).set(flag || null);
+        close();
+      } catch (e) {
+        errEl.textContent = "Échec : " + (e.message || e);
+      }
+    });
+
+    box
+      .querySelector("#gpEditLogoutBtn")
+      .addEventListener("click", async () => {
+        await _fbAuth.signOut();
+        close();
+      });
+  }
+
+  return {
+    init,
+    update,
+    autoCapture,
+    setCurrent,
+    getChampLeader,
+    testMxon,
+    editMode,
+  };
 })();
 
 if (document.readyState === "loading") {

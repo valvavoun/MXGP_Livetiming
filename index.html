@@ -217,6 +217,15 @@
       </div>
     </template>
 
+    <!-- Firebase SDK (compat, via CDN — pas de build tool sur ce site).
+         Utilisé UNIQUEMENT par la fonction cachée GP.editMode()
+         (édition manuelle nom/flag, réservée au propriétaire).
+         Le script headless (capture.js) ne charge pas ces balises et
+         n'en a pas besoin, il utilise son propre secret DB. -->
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+
     <!-- JS — settings en premier pour que --gc soit prêt avant render -->
     <script src="js/settings.js"></script>
     <script src="js/gp.js"></script>
