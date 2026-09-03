@@ -217,11 +217,15 @@
       </div>
     </template>
 
+    <!-- URL cachée ?edit=1 : ouvre le mode édition manuelle des noms et flags
+          après authentification Firebase (réservé au propriétaire). -->
+    <!-- URL de test ?mxontest=1 : force l'affichage du mode MXON de test.
+          À retirer de l'URL pour revenir au fonctionnement normal. -->
     <!-- Firebase SDK (compat, via CDN — pas de build tool sur ce site).
-         Utilisé UNIQUEMENT par la fonction cachée GP.editMode()
-         (édition manuelle nom/flag, réservée au propriétaire).
-         Le script headless (capture.js) ne charge pas ces balises et
-         n'en a pas besoin, il utilise son propre secret DB. -->
+          Utilisé par la fonction cachée GP.editMode()
+          (édition manuelle nom/flag, réservée au propriétaire).
+          Le script headless (capture.js) ne charge pas ces balises et
+          n'en a pas besoin, il utilise son propre secret DB. -->
     <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
