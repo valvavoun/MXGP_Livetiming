@@ -375,11 +375,16 @@ async function negotiate() {
     lg("NEG", "Direct: " + e1.message + " → proxy…");
   }
 
+  /* corsproxy.io a changé de modèle début 2026 : l'ancien format anonyme
+     "/?<url>" renvoie désormais 403 (il faut un compte + "?key=...&url=...").
+     On bascule sur api.allorigins.win, qui accepte encore les requêtes
+     anonymes. Si un jour ce service change aussi, remplacer PROXY_URL
+     ci-dessous suffit (un seul point de bascule). */
+  const PROXY_URL = (u) =>
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`;
+
   try {
-    const r = await fetchTO(
-      `https://corsproxy.io/?${encodeURIComponent(url)}`,
-      7000,
-    );
+    const r = await fetchTO(PROXY_URL(url), 7000);
     if (!r.ok) throw new Error("HTTP " + r.status);
     const d = await r.json();
     if (!d.ConnectionToken) throw new Error("No token");
