@@ -102,29 +102,46 @@ const GP = (() => {
      Activation : URL avec ?mxontest=1, ou dans la console : GP.testMxon(true) */
   let _forceMxon = false;
 
-  /* ── Mode test MXoN : mapping catégorie réelle → créneau R1/R2/R3 ──
+  /* ── Mode test MXoN : mapping catégorie+manche réelle → créneau R1/R2/R3 ──
      Sur un GP normal, plusieurs vraies catégories (MX2, MXGP, EMX...)
      ont chacune leur propre "Race 1"/"Race 2" — sans ce mapping, elles
      s'écraseraient toutes sous la même clé une fois forcées en MXON
      (la clé de session normale ignore la catégorie). On assigne un
-     créneau unique par catégorie réelle rencontrée, dans l'ordre
-     d'arrivée, jusqu'à 3 — exactement comme les 3 vraies manches du
-     MXoN. Permet de tester TOUT le pipeline (agrégation, retrait du
-     pire résultat, classement par nation) sur un GP classique, avant
-     le vrai jour. Ne s'applique QUE si _forceMxon est actif
-     manuellement — jamais le jour réel (où le flux enverra
-     directement de vraies clés R1/R2/R3, sans ambiguïté). */
-  let _mxonTestSlots = {}; // catégorie réelle → "R1" | "R2" | "R3"
+     créneau unique par COMBINAISON catégorie+manche rencontrée, dans
+     l'ordre d'arrivée, jusqu'à 3 — exactement comme les 3 vraies manches
+     du MXoN. Couvre les deux façons de tester :
+       • plusieurs vraies catégories en parallèle (chacune → 1 créneau)
+       • UNE SEULE catégorie qui enchaîne QR → Race1 → Race2 (chaque
+         manche de cette même catégorie → son propre créneau, au lieu
+         d'écraser toujours le même — c'était le bug : la clé était
+         basée sur la catégorie seule, donc 2 manches de la même
+         catégorie retombaient sur le même créneau R1).
+     Permet de tester TOUT le pipeline (agrégation, retrait du pire
+     résultat, classement par nation) sur un GP classique, avant le
+     vrai jour. Ne s'applique QUE si _forceMxon est actif manuellement
+     — jamais le jour réel (où le flux enverra directement de vraies
+     clés R1/R2/R3, sans ambiguïté). */
+  let _mxonTestSlots = {}; // "catégorie|manche réelle" → "R1" | "R2" | "R3"
   const _mxonTestSlotOrder = ["R1", "R2", "R3"];
 
-  function _mxonTestSlotFor(realCat) {
+  function _mxonTestSlotFor(realCat, meta) {
     if (!realCat) return null;
-    if (_mxonTestSlots[realCat]) return _mxonTestSlots[realCat];
+    /* Manche réelle détectée normalement (QR/R1/R2/R3, ou brut si pas
+       reconnu) — c'est CE changement qui doit déclencher un nouveau
+       créneau, pas la catégorie seule. */
+    const realSess =
+      _normalizeSessionType(String(meta?.sessType || "").trim()) ||
+      _normalizeSessionType(String(meta?.time || "").trim()) ||
+      _normalizeSessionType(String(meta?.title || "").trim()) ||
+      String(meta?.sessType || meta?.title || "?").trim().toLowerCase();
+    const key = `${realCat}|${realSess}`;
+
+    if (_mxonTestSlots[key]) return _mxonTestSlots[key];
     const used = Object.values(_mxonTestSlots);
     const next = _mxonTestSlotOrder.find((s) => !used.includes(s));
-    if (!next) return null; // déjà 3 catégories réelles différentes vues
-    _mxonTestSlots[realCat] = next;
-    console.log(`[GP] MXoN TEST — "${realCat}" assigné au créneau ${next}`);
+    if (!next) return null; // déjà 3 manches différentes vues
+    _mxonTestSlots[key] = next;
+    console.log(`[GP] MXoN TEST — "${key}" assigné au créneau ${next}`);
     return next;
   }
 
@@ -340,7 +357,7 @@ const GP = (() => {
     if (_forceMxon) {
       // Mode test manuel — mapping catégorie réelle → créneau (inchangé)
       const realCat = String(meta.category || "").trim();
-      const slot = _mxonTestSlotFor(realCat);
+      const slot = _mxonTestSlotFor(realCat, meta);
       if (slot) return slot;
     } else if (_isMxonWeekByDate()) {
       // Semaine RÉELLE du MXoN — priorité absolue à cette détection,
