@@ -352,6 +352,18 @@ function initScrollSync() {
 /* ═══════════════════════════════════════════════
    1. NEGOTIATE
 ═══════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════
+   PROXY CORS — point de bascule unique.
+   MXGP ne renvoie jamais d'en-tête Access-Control-Allow-Origin,
+   donc TOUT appel fetch() direct depuis un navigateur (negotiate
+   ET start) est bloqué par CORS, quelle que soit l'origine.
+   Remplacer l'URL ci-dessous par votre propre proxy (ex: un
+   Cloudflare Worker) pour ne plus dépendre d'un service tiers
+   gratuit dont les conditions peuvent changer sans préavis.
+═══════════════════════════════════════════════ */
+const PROXY_URL = (u) =>
+  `https://mxgp-proxy.valvavoun79200.workers.dev/?url=${encodeURIComponent(u)}`;
+
 async function negotiate() {
   /* FIX: si la session est déjà marquée FINISHED, ne pas écraser le badge
      avec l'état "connecting" pendant les tentatives de reconnexion en
@@ -374,14 +386,6 @@ async function negotiate() {
   } catch (e1) {
     lg("NEG", "Direct: " + e1.message + " → proxy…");
   }
-
-  /* corsproxy.io a changé de modèle début 2026 : l'ancien format anonyme
-     "/?<url>" renvoie désormais 403 (il faut un compte + "?key=...&url=...").
-     On bascule sur api.allorigins.win, qui accepte encore les requêtes
-     anonymes. Si un jour ce service change aussi, remplacer PROXY_URL
-     ci-dessous suffit (un seul point de bascule). */
-  const PROXY_URL = (u) =>
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`;
 
   try {
     const r = await fetchTO(PROXY_URL(url), 7000);
@@ -487,12 +491,30 @@ function connectWS(token) {
 }
 
 async function sendStart(token) {
+  const url = `${CFG.base}/start?transport=webSockets&clientProtocol=${CFG.proto}&connectionToken=${encodeURIComponent(token)}&_=${Date.now()}`;
+
+  /* Direct d'abord (au cas où MXGP autoriserait un jour le CORS ici) */
   try {
-    await fetch(
-      `${CFG.base}/start?transport=webSockets&clientProtocol=${CFG.proto}&connectionToken=${encodeURIComponent(token)}&_=${Date.now()}`,
-      { mode: "cors" },
-    );
-  } catch (e) {}
+    const r = await fetchTO(url, 5000);
+    if (r.ok) {
+      lg("START", "✅ Direct OK");
+      return;
+    }
+    throw new Error("HTTP " + r.status);
+  } catch (e1) {
+    lg("START", "Direct: " + e1.message + " → proxy…");
+  }
+
+  /* Sinon, même proxy que negotiate() — sans ce /start, le serveur
+     SignalR ne commence jamais à pousser les données, même si le
+     WebSocket affiche "Connected". */
+  try {
+    const r = await fetchTO(PROXY_URL(url), 7000);
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    lg("START", "✅ Proxy OK");
+  } catch (e2) {
+    lg("START", "❌ Proxy: " + e2.message);
+  }
 }
 
 function _startWatchdog() {
