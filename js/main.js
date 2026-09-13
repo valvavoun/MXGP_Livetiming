@@ -191,6 +191,7 @@ const NAT_FLAGS = {
   CHN: "cn",
   LIE: "li",
   ISR: "il",
+  TUR: "tr",
 };
 
 function getNatFlag(nat) {
@@ -352,18 +353,6 @@ function initScrollSync() {
 /* ═══════════════════════════════════════════════
    1. NEGOTIATE
 ═══════════════════════════════════════════════ */
-/* ═══════════════════════════════════════════════
-   PROXY CORS — point de bascule unique.
-   MXGP ne renvoie jamais d'en-tête Access-Control-Allow-Origin,
-   donc TOUT appel fetch() direct depuis un navigateur (negotiate
-   ET start) est bloqué par CORS, quelle que soit l'origine.
-   Remplacer l'URL ci-dessous par votre propre proxy (ex: un
-   Cloudflare Worker) pour ne plus dépendre d'un service tiers
-   gratuit dont les conditions peuvent changer sans préavis.
-═══════════════════════════════════════════════ */
-const PROXY_URL = (u) =>
-  `https://mxgp-proxy.valvavoun79200.workers.dev/?url=${encodeURIComponent(u)}`;
-
 async function negotiate() {
   /* FIX: si la session est déjà marquée FINISHED, ne pas écraser le badge
      avec l'état "connecting" pendant les tentatives de reconnexion en
@@ -388,7 +377,10 @@ async function negotiate() {
   }
 
   try {
-    const r = await fetchTO(PROXY_URL(url), 7000);
+    const r = await fetchTO(
+      `https://corsproxy.io/?${encodeURIComponent(url)}`,
+      7000,
+    );
     if (!r.ok) throw new Error("HTTP " + r.status);
     const d = await r.json();
     if (!d.ConnectionToken) throw new Error("No token");
@@ -491,30 +483,12 @@ function connectWS(token) {
 }
 
 async function sendStart(token) {
-  const url = `${CFG.base}/start?transport=webSockets&clientProtocol=${CFG.proto}&connectionToken=${encodeURIComponent(token)}&_=${Date.now()}`;
-
-  /* Direct d'abord (au cas où MXGP autoriserait un jour le CORS ici) */
   try {
-    const r = await fetchTO(url, 5000);
-    if (r.ok) {
-      lg("START", "✅ Direct OK");
-      return;
-    }
-    throw new Error("HTTP " + r.status);
-  } catch (e1) {
-    lg("START", "Direct: " + e1.message + " → proxy…");
-  }
-
-  /* Sinon, même proxy que negotiate() — sans ce /start, le serveur
-     SignalR ne commence jamais à pousser les données, même si le
-     WebSocket affiche "Connected". */
-  try {
-    const r = await fetchTO(PROXY_URL(url), 7000);
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    lg("START", "✅ Proxy OK");
-  } catch (e2) {
-    lg("START", "❌ Proxy: " + e2.message);
-  }
+    await fetch(
+      `${CFG.base}/start?transport=webSockets&clientProtocol=${CFG.proto}&connectionToken=${encodeURIComponent(token)}&_=${Date.now()}`,
+      { mode: "cors" },
+    );
+  } catch (e) {}
 }
 
 function _startWatchdog() {

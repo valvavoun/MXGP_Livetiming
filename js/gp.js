@@ -126,9 +126,6 @@ const GP = (() => {
 
   function _mxonTestSlotFor(realCat, meta) {
     if (!realCat) return null;
-    /* Manche réelle détectée normalement (QR/R1/R2/R3, ou brut si pas
-       reconnu) — c'est CE changement qui doit déclencher un nouveau
-       créneau, pas la catégorie seule. */
     const realSess =
       _normalizeSessionType(String(meta?.sessType || "").trim()) ||
       _normalizeSessionType(String(meta?.time || "").trim()) ||
@@ -2973,15 +2970,137 @@ const GP = (() => {
     const curName = allGPs[wk]?.cats?.[cat]?.name || "";
     const curFlag = allGPs[wk]?.flag || "";
 
+    /* Noms FR des pays déjà présents dans NAT_FLAGS (main.js) — sert
+       uniquement à l'affichage du menu déroulant. La valeur stockée
+       reste le code 3 lettres (FRA, NED...), inchangée, donc rien
+       d'autre ne bouge dans le reste du site. */
+    const FLAG_COUNTRY_NAMES = {
+      FRA: "France",
+      BEL: "Belgique",
+      NED: "Pays-Bas",
+      GER: "Allemagne",
+      ITA: "Italie",
+      ESP: "Espagne",
+      GBR: "Royaume-Uni",
+      USA: "États-Unis",
+      AUS: "Australie",
+      SWE: "Suède",
+      NOR: "Norvège",
+      DEN: "Danemark",
+      FIN: "Finlande",
+      SUI: "Suisse",
+      AUT: "Autriche",
+      POR: "Portugal",
+      CZE: "Tchéquie",
+      POL: "Pologne",
+      BRA: "Brésil",
+      CAN: "Canada",
+      NZL: "Nouvelle-Zélande",
+      JPN: "Japon",
+      RSA: "Afrique du Sud",
+      SLO: "Slovénie",
+      LAT: "Lettonie",
+      EST: "Estonie",
+      LTU: "Lituanie",
+      SVK: "Slovaquie",
+      HUN: "Hongrie",
+      CRO: "Croatie",
+      BUL: "Bulgarie",
+      ROU: "Roumanie",
+      SRB: "Serbie",
+      CHI: "Chili",
+      COL: "Colombie",
+      MEX: "Mexique",
+      ARG: "Argentine",
+      INA: "Indonésie",
+      THA: "Thaïlande",
+      CHN: "Chine",
+      LIE: "Liechtenstein",
+      ISR: "Israël",
+      TUR: "Turquie",
+    };
+
+    /* Un <select> natif ne peut pas afficher d'images dans ses options
+       (non supporté par les navigateurs) — et les emojis drapeau ne
+       s'affichent pas correctement sous Windows/Chrome (il montre le
+       code pays en texte, ex. "ZA", au lieu du drapeau). On construit
+       donc un menu déroulant "maison" avec de vraies images, en
+       réutilisant exactement la même source que la colonne Nat des
+       pilotes (flagpedia). */
+    const NF = typeof NAT_FLAGS !== "undefined" ? NAT_FLAGS : {};
+    const flagList = Object.keys(NF)
+      .map((code) => ({
+        code,
+        iso2: NF[code],
+        name: FLAG_COUNTRY_NAMES[code] || code,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name, "fr"));
+
+    const flagImg = (iso2, size) =>
+      iso2
+        ? `<img src="https://flagpedia.net/data/flags/w${size || 40}/${iso2}.webp" style="width:${size === 80 ? 28 : 20}px;height:auto;vertical-align:middle;border-radius:2px;box-shadow:0 0 0 1px rgba(255,255,255,.15);">`
+        : "";
+
+    const curEntry = flagList.find((o) => o.code === curFlag);
+    const curPreviewHtml = curEntry
+      ? `${flagImg(curEntry.iso2, 28)} <span style="margin-left:8px;">${curEntry.name} (${curEntry.code})</span>`
+      : curFlag
+        ? `<span>${curFlag} (personnalisé)</span>`
+        : `<span style="opacity:.5;">— Aucun —</span>`;
+
+    const flagRowsHtml =
+      `<div class="gpFlagOpt" data-code="" style="display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;opacity:.6;">— Aucun —</div>` +
+      flagList
+        .map(
+          (o) =>
+            `<div class="gpFlagOpt" data-code="${o.code}" style="display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;">` +
+            `${flagImg(o.iso2, 40)}<span>${o.name} (${o.code})</span></div>`,
+        )
+        .join("");
+
     box.innerHTML =
       `<div style="font-weight:700;margin-bottom:10px;">✏ ${cat} — ${wk}</div>` +
       '<label style="font-size:11px;opacity:.6;">Nom du GP</label>' +
       `<input id="gpEditName" value="${curName.replace(/"/g, "&quot;")}" style="${fieldCss}">` +
-      '<label style="font-size:11px;opacity:.6;">Flag (emoji ou code pays)</label>' +
-      `<input id="gpEditFlag" value="${curFlag.replace(/"/g, "&quot;")}" style="${fieldCss}">` +
+      '<label style="font-size:11px;opacity:.6;">Flag (pays)</label>' +
+      `<input type="hidden" id="gpEditFlag" value="${curFlag.replace(/"/g, "&quot;")}">` +
+      `<div id="gpEditFlagBtn" style="${fieldCss}display:flex;align-items:center;cursor:pointer;user-select:none;">${curPreviewHtml}</div>` +
+      `<div id="gpEditFlagPanel" hidden style="position:relative;max-height:220px;overflow-y:auto;background:#0b0d16;border:1px solid rgba(255,255,255,.12);border-radius:4px;margin:-6px 0 10px;">${flagRowsHtml}</div>` +
       `<button id="gpEditSaveBtn" style="${btnCss}background:#00cc55;color:#fff;">Enregistrer</button>` +
       `<button id="gpEditLogoutBtn" style="${btnCss}background:transparent;color:#999;border:1px solid #333;">Déconnexion</button>` +
       '<div id="gpEditErr" style="color:#ff6b6b;font-size:11px;"></div>';
+
+    /* Ouverture/fermeture + sélection du menu déroulant maison */
+    const flagBtn = box.querySelector("#gpEditFlagBtn");
+    const flagPanel = box.querySelector("#gpEditFlagPanel");
+    const flagHidden = box.querySelector("#gpEditFlag");
+
+    flagBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      flagPanel.hidden = !flagPanel.hidden;
+    });
+
+    flagPanel.querySelectorAll(".gpFlagOpt").forEach((row) => {
+      row.addEventListener("mouseenter", () => {
+        row.style.background = "rgba(255,255,255,.06)";
+      });
+      row.addEventListener("mouseleave", () => {
+        row.style.background = "transparent";
+      });
+      row.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const code = row.dataset.code;
+        flagHidden.value = code;
+        flagBtn.innerHTML = code
+          ? row.innerHTML
+          : `<span style="opacity:.5;">— Aucun —</span>`;
+        flagPanel.hidden = true;
+      });
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!flagPanel.hidden && !box.contains(e.target)) flagPanel.hidden = true;
+    });
 
     box.querySelector("#gpEditSaveBtn").addEventListener("click", async () => {
       const name = box.querySelector("#gpEditName").value.trim();
