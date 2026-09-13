@@ -1075,6 +1075,7 @@ const GP = (() => {
             renderBody: _renderBody,
             sortedWeeks: _sortedWeeks,
             esc: _esc,
+            getChampTop3: _champTop3,
           });
         });
       }, 100);
@@ -1522,6 +1523,7 @@ const GP = (() => {
 
     const leaderTotal = rows[0]?.total || 0;
     const leaderTotalAll = rows[0]?.totalAll || 0;
+    const champTop3 = _champTop3(wk.slice(0, 4), activeCat);
 
     html += `<div class="gp-table-wrap"><table class="gp-table"><thead><tr>
       <th>#</th><th>Rider</th><th class="gp-th-bike">Bike</th>
@@ -1547,11 +1549,12 @@ const GP = (() => {
             ? "gp-diff-close"
             : "";
 
+      const cm = _champMarkup(r.nr, champTop3);
       html += `<tr class="${posCls}">
         <td class="gp-td-pos">${gpPos}</td>
-        <td class="gp-td-name">
+        <td class="gp-td-name${cm.tdCls}">
           <span class="gp-fn">${_esc(r.fn)}</span>
-          <span class="gp-ln">${_esc(r.ln)}</span>
+          <span class="gp-ln${cm.lnCls}">${_esc(r.ln)}</span>
           <span class="gp-nr">#${r.nr}</span>
         </td>
         <td class="gp-td-bike gp-th-bike">${_esc(r.bike)}</td>
@@ -1910,13 +1913,16 @@ const GP = (() => {
       <th>Points</th>
     </tr></thead><tbody>`;
 
+    const champTop3 = _champTop3(wk.slice(0, 4), activeCat);
+
     race.results.forEach((r) => {
       const posCls = r.pos <= 3 ? `gp-pos-${r.pos}` : "";
+      const cm = _champMarkup(r.nr, champTop3);
       html += `<tr class="${posCls}">
         <td class="gp-td-pos">${r.pos}</td>
-        <td class="gp-td-name">
+        <td class="gp-td-name${cm.tdCls}">
           <span class="gp-fn">${_esc(r.fn)}</span>
-          <span class="gp-ln">${_esc(r.ln)}</span>
+          <span class="gp-ln${cm.lnCls}">${_esc(r.ln)}</span>
           <span class="gp-nr">#${r.nr}</span>
         </td>
         <td class="gp-td-bike gp-th-bike">${_esc(r.bike)}</td>
@@ -2118,12 +2124,16 @@ const GP = (() => {
           : leader - r.net <= 15
             ? "gp-diff-close"
             : "";
+      const cm =
+        idx < 3
+          ? { tdCls: ` gp-champ-${idx + 1}`, lnCls: ` gp-champ-${idx + 1}` }
+          : { tdCls: "", lnCls: "" };
 
       html += `<tr class="${posCls}">
         <td class="gp-td-pos">${pos}</td>
-        <td class="gp-td-name">
+        <td class="gp-td-name${cm.tdCls}">
           <span class="gp-fn">${_esc(r.fn)}</span>
-          <span class="gp-ln">${_esc(r.ln)}</span>
+          <span class="gp-ln${cm.lnCls}">${_esc(r.ln)}</span>
           <span class="gp-nr">#${r.nr}</span>
         </td>
         <td class="gp-td-bike gp-th-bike">${_esc(r.bike)}</td>`;
@@ -2240,14 +2250,16 @@ const GP = (() => {
 
   function _liveFirebaseTable(key, liveD) {
     const isMxon = _normalizeCat(liveD.cat) === MXON_CAT;
+    const champTop3 = _champTop3(_getSeasons()[0], _normalizeCat(liveD.cat));
     const rows = (liveD.riders || [])
       .map((r) => {
         const pc = r.pos <= 3 ? `gp-pos-${r.pos}` : "";
+        const cm = _champMarkup(r.nr, champTop3);
         return `<tr class="${pc}">
         <td class="gp-td-pos">${r.pos}</td>
-        <td class="gp-td-name">
+        <td class="gp-td-name${cm.tdCls}">
           <span class="gp-fn">${_esc(r.fn)}</span>
-          <span class="gp-ln">${_esc(r.ln)}</span>
+          <span class="gp-ln${cm.lnCls}">${_esc(r.ln)}</span>
           <span class="gp-nr">#${r.nr}</span>
         </td>
         <td class="gp-td-bike gp-th-bike">${_esc(r.bike)}</td>
@@ -2275,6 +2287,7 @@ const GP = (() => {
 
   function _previewTable(key, cat) {
     const isMxon = cat === MXON_CAT;
+    const champTop3 = _champTop3(_getSeasons()[0], cat);
     const riders = [...latestRiders]
       .filter((r) => r.pos && r.pos > 0)
       .sort((a, b) => a.pos - b.pos);
@@ -2283,11 +2296,12 @@ const GP = (() => {
       .map((r, i) => {
         const pts = _ptsFor(cat, key, r.pos, i);
         const pc = r.pos <= 3 ? `gp-pos-${r.pos}` : "";
+        const cm = _champMarkup(r.nr, champTop3);
         return `<tr class="${pc}">
         <td class="gp-td-pos">${r.pos}</td>
-        <td class="gp-td-name">
+        <td class="gp-td-name${cm.tdCls}">
           <span class="gp-fn">${_esc(r.fn || "")}</span>
-          <span class="gp-ln">${_esc(r.ln || "")}</span>
+          <span class="gp-ln${cm.lnCls}">${_esc(r.ln || "")}</span>
           <span class="gp-nr">#${r.nr}</span>
         </td>
         <td class="gp-td-bike gp-th-bike">${_esc(r.bike || "")}</td>
@@ -2423,6 +2437,32 @@ const GP = (() => {
     if (!seasons.length) return null;
     const rows = _computeSeasonStandings(seasons[0], cat);
     return rows.length ? String(rows[0].nr) : null;
+  }
+
+  /** Retourne les nr (strings) des 3 premiers du championnat pour une
+   *  saison + catégorie données. Utilisé UNIQUEMENT dans le panneau
+   *  GP Standings (résultats Qualif/Course, Season, Stats) pour mettre
+   *  en valeur le top 3 — n'affecte jamais le live timing (qui garde
+   *  son propre getChampLeader, leader uniquement). */
+  function _champTop3(season, cat) {
+    if (!season || !cat) return [];
+    const rows = _computeSeasonStandings(season, cat);
+    return rows.slice(0, 3).map((r) => String(r.nr));
+  }
+
+  /** Construit le petit "kit" d'affichage (médaille + classes CSS)
+   *  pour un pilote donné, selon son rang dans le top 3 du
+   *  championnat (top3 = tableau de nr, déjà trié 1er→3ème).
+   *  Retourne des chaînes vides si le pilote n'est pas dans le top 3. */
+  function _champMarkup(nr, top3) {
+    const idx = top3.indexOf(String(nr));
+    if (idx === -1) return { tdCls: "", lnCls: "", medal: "" };
+    const rank = idx + 1;
+    return {
+      tdCls: ` gp-champ-${rank}`,
+      lnCls: ` gp-champ-${rank}`,
+      medal: "",
+    };
   }
 
   /* ═══════════════════════════════════════════════════════════

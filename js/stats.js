@@ -69,6 +69,7 @@ const Stats = (() => {
       getSeasons,
       renderSeasonCatBar,
       esc,
+      getChampTop3,
     } = _ctx;
 
     const seasons = getSeasons();
@@ -233,10 +234,20 @@ const Stats = (() => {
       });
       html += `</tr></thead><tbody>`;
 
+      const champTop3 = getChampTop3
+        ? getChampTop3(getActiveSeason(), activeCat)
+        : [];
+
       rows.forEach((r, idx) => {
         const pos = idx + 1;
         const posCls = pos <= 3 ? `gp-pos-${pos}` : "";
         const barW = Math.round((r.racewins / maxWins) * 60);
+
+        const champRank = champTop3.indexOf(String(r.nr));
+        const cm =
+          champRank !== -1
+            ? { tdCls: ` gp-champ-${champRank + 1}`, lnCls: ` gp-champ-${champRank + 1}` }
+            : { tdCls: "", lnCls: "" };
 
         const winsCell =
           r.racewins > 0
@@ -250,9 +261,9 @@ const Stats = (() => {
 
         html += `<tr class="${posCls}">
         <td>${pos}</td>
-        <td>
+        <td class="gp-td-name${cm.tdCls}">
           <span class="gp-fn">${esc(r.fn)}</span>
-          <span class="gp-ln">${esc(r.ln)}</span>
+          <span class="gp-ln${cm.lnCls}">${esc(r.ln)}</span>
           <span class="gp-nr">#${r.nr}</span>
         </td>
         <td>${r.gps}</td>

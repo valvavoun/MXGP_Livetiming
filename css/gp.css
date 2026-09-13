@@ -709,6 +709,39 @@
   margin-left: 5px;
 }
 
+/* ── Top 3 du championnat (panneau GP Standings uniquement — Qualif,
+   Course, Season, Stats) — jamais le live timing. Mêmes couleurs que
+   le podium .gp-pos-1/2/3 déjà utilisé ailleurs sur le site (or,
+   argent, bronze), pour rester cohérent. Rendu par : médaille devant
+   le nom + nom coloré + liseré sur la cellule (plus lisible qu'un
+   simple contour sur le petit "#nr"). */
+.gp-td-name.gp-champ-1,
+.gp-td-name.gp-champ-2,
+.gp-td-name.gp-champ-3 {
+  padding-left: 7px;
+}
+.gp-td-name.gp-champ-1 {
+  border-left: 3px solid var(--c-yellow, #f5c400);
+}
+.gp-td-name.gp-champ-2 {
+  border-left: 3px solid #b8b8b8;
+}
+.gp-td-name.gp-champ-3 {
+  border-left: 3px solid #cd7f32;
+}
+.gp-ln.gp-champ-1 {
+  color: var(--c-yellow, #f5c400);
+  text-shadow: 0 0 8px rgba(245, 196, 0, 0.35);
+}
+.gp-ln.gp-champ-2 {
+  color: #e2e2e2;
+  text-shadow: 0 0 8px rgba(220, 220, 220, 0.25);
+}
+.gp-ln.gp-champ-3 {
+  color: #e0a468;
+  text-shadow: 0 0 8px rgba(205, 127, 50, 0.3);
+}
+
 .gp-pts {
   font-size: 15px;
   font-weight: 700;
